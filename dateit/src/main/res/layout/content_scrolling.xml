@@ -7,7 +7,64 @@
     android:layout_height="match_parent" app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="com.krkeco.dateit.ScrollingActivity" tools:showIn="@layout/activity_scrolling">
 
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_margin="@dimen/text_margin" android:text="@string/large_text" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:id="@+id/scroll_llayout">
 
+    <TextView android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/text_margin"
+        android:text="Days Available" />
+
+
+        <TextView android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/text_margin"
+            android:text="Start Date:" />
+
+    <CalendarView
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        ></CalendarView>
+
+        <TextView android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/text_margin"
+            android:text="End Date:" />
+        <CalendarView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            ></CalendarView>
+
+
+    <TextView android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/text_margin"
+        android:text="Hours available" />
+
+
+    <TextView android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/text_margin"
+        android:text="Earliest available" />
+        <TimePicker
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"></TimePicker>
+    <TextView android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/text_margin"
+        android:text="Latest Available:" />
+        <TimePicker
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"></TimePicker>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Calendars to reference:"/>
+
+    </LinearLayout>
 </android.support.v4.widget.NestedScrollView>

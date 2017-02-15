@@ -5,12 +5,16 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
 
 public class ScrollingActivity extends AppCompatActivity {
 
+
+    LinearLayout main;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -26,6 +30,22 @@ public class ScrollingActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+
+
+        main = (LinearLayout) findViewById(R.id.scroll_llayout);
+
+        addCheckBox("newb@live.com");
+        
+    }
+
+    public void addCheckBox(String text){
+
+        final CheckBox checkBox = (CheckBox) new CheckBox(this);
+        checkBox.setText(text);
+        if (checkBox.isChecked()) {
+            checkBox.setChecked(false);
+        }
+        main.addView(checkBox);
     }
 
     @Override
