@@ -1,5 +1,6 @@
 package com.krkeco.dateit;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -28,6 +29,9 @@ public class ScrollingActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
+                Intent intent = new Intent(ScrollingActivity.this, ReturnActivity.class);
+
+                startActivity(intent);
             }
         });
 
@@ -35,7 +39,7 @@ public class ScrollingActivity extends AppCompatActivity {
         main = (LinearLayout) findViewById(R.id.scroll_llayout);
 
         addCheckBox("newb@live.com");
-        
+
     }
 
     public void addCheckBox(String text){
@@ -68,4 +72,8 @@ public class ScrollingActivity extends AppCompatActivity {
         }
         return super.onOptionsItemSelected(item);
     }
+
+
+
+
 }

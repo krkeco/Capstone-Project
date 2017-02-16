@@ -1,10 +1,12 @@
 <resources>
     <string name="app_name">DateIt</string>
 
-        <string-array name="calendar_array_default">
-            <item>myemail@gmail.com</item>
-            <item>example@yahoo.com</item>
-            <item>totaln00b@live.com</item>
-        </string-array>
+    <string-array name="calendar_array_default">
+        <item>myemail@gmail.com</item>
+        <item>example@yahoo.com</item>
+        <item>totaln00b@live.com</item>
+    </string-array>
     <string name="action_settings">Settings</string>
+    <string name="title_activity_return">ReturnActivity</string>
+
 </resources>
