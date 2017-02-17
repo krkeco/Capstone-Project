@@ -27,6 +27,7 @@
     <CalendarView
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
+        android:id="@+id/start_calendar"
         ></CalendarView>
 
         <TextView android:layout_width="wrap_content"
@@ -36,6 +37,7 @@
         <CalendarView
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
+            android:id="@+id/end_calendar"
             ></CalendarView>
 
 
@@ -51,14 +53,16 @@
         android:text="Earliest available" />
         <TimePicker
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"></TimePicker>
+            android:layout_height="match_parent"
+            android:id="@+id/start_time_picker"></TimePicker>
     <TextView android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/text_margin"
         android:text="Latest Available:" />
         <TimePicker
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"></TimePicker>
+            android:layout_height="match_parent"
+            android:id="@+id/end_time_picker"></TimePicker>
 
 
         <TextView
