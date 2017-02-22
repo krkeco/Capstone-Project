@@ -2,14 +2,22 @@ package com.krkeco.dateit;
 
 import android.accounts.AccountManager;
 import android.app.Dialog;
+import android.app.LoaderManager;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.Loader;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.NfcAdapter;
+import android.nfc.NfcAdapter.CreateNdefMessageCallback;
+import android.nfc.NfcEvent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -27,6 +35,7 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.InterstitialAd;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.extensions.android.http.AndroidHttp;
@@ -41,6 +50,7 @@ import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
+import com.krkeco.dateit.admob.AdMob;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,8 +59,16 @@ import java.util.List;
 
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
+import timber.log.Timber;
 
-public class ScrollingActivity extends AppCompatActivity  implements EasyPermissions.PermissionCallbacks {
+import static android.nfc.NdefRecord.createMime;
+
+public class ScrollingActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks,
+        LoaderManager.LoaderCallbacks,
+        CreateNdefMessageCallback {
+
+    NfcAdapter mNfcAdapter;
+
     GoogleAccountCredential mCredential;
     private TextView mOutputText;
     ProgressDialog mProgress;
@@ -62,13 +80,78 @@ public class ScrollingActivity extends AppCompatActivity  implements EasyPermiss
 
     private static final String BUTTON_TEXT = "Call Google Calendar API";
     private static final String PREF_ACCOUNT_NAME = "accountName";
-    private static final String[] SCOPES = { CalendarScopes.CALENDAR_READONLY };
+    private static final String[] SCOPES = {CalendarScopes.CALENDAR_READONLY};
+    CalendarView endCalenderView;
+    public LinearLayout main;
 
-    LinearLayout main;
+    private InterstitialAd mInterstitialAd;
+    private AdMob adMob;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scrolling);
+        main = (LinearLayout) findViewById(R.id.scroll_llayout);
+
+
+        if (BuildConfig.DEBUG) {
+            Timber.plant(new Timber.DebugTree());
+        }
+
+        initLayout();
+
+        initGoogleCred();
+
+        initAdmob();
+
+        initCalendar();
+
+        initNFC();
+
+
+    }
+
+    public void initNFC(){
+        // Check for available NFC Adapter
+        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        if (mNfcAdapter == null) {
+            Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        // Register callback
+        mNfcAdapter.setNdefPushMessageCallback(this, this);
+    }
+
+    public void initCalendar() {
+
+        getLoaderManager().initLoader(0, null, this);
+    }
+
+    public void initAdmob() {
+        adMob = new AdMob(this);
+        mInterstitialAd = adMob.newInterstitialAd();
+
+    }
+
+    public void initGoogleCred() {
+
+        // Initialize credentials and service object.
+        mCredential = GoogleAccountCredential.usingOAuth2(
+                getApplicationContext(), Arrays.asList(SCOPES))
+                .setBackOff(new ExponentialBackOff());
+        mOutputText.setText("");
+
+
+        //getAccount();
+
+
+    }
+
+
+
+    public void initLayout(){
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -79,41 +162,45 @@ public class ScrollingActivity extends AppCompatActivity  implements EasyPermiss
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
 
+                adMob.showInterstitial();
+
             }
         });
-        main = (LinearLayout) findViewById(R.id.scroll_llayout);
 
-        CalendarView startCalenderView =(CalendarView) findViewById(R.id.start_calendar);
+
+        CalendarView startCalenderView = (CalendarView) findViewById(R.id.start_calendar);
+
+        endCalenderView = (CalendarView) findViewById(R.id.end_calendar);
+
         startCalenderView.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
             @Override
             public void onSelectedDayChange(CalendarView arg0, int year, int month,
                                             int date) {
-                Toast.makeText(getApplicationContext(),(month+1)+ "/"+date+"/"+year,Toast.LENGTH_LONG).show();
-            }
+                Toast.makeText(getApplicationContext(), (month + 1) + "/" + date + "/" + year, Toast.LENGTH_LONG).show();
+                }
         });
 
-        CalendarView endCalenderView =(CalendarView) findViewById(R.id.end_calendar);
         endCalenderView.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
             @Override
             public void onSelectedDayChange(CalendarView arg0, int year, int month,
                                             int date) {
-                Toast.makeText(getApplicationContext(),(month+1)+ "/"+date+"/"+year,Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), (month + 1) + "/" + date + "/" + year, Toast.LENGTH_LONG).show();
             }
         });
 
         TimePicker startTimePicker = (TimePicker) findViewById(R.id.start_time_picker);
-        startTimePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener(){
+        startTimePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
             @Override
             public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
-                Toast.makeText(getApplicationContext(),hourOfDay+":"+minute+" is set for time",Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), hourOfDay + ":" + minute + " is set for time", Toast.LENGTH_LONG).show();
             }
         });
 
         TimePicker endTimePicker = (TimePicker) findViewById(R.id.end_time_picker);
-        endTimePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener(){
+        endTimePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
             @Override
             public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
-                Toast.makeText(getApplicationContext(),hourOfDay+":"+minute+" is set for time",Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), hourOfDay + ":" + minute + " is set for time", Toast.LENGTH_LONG).show();
             }
         });
 
@@ -129,18 +216,29 @@ public class ScrollingActivity extends AppCompatActivity  implements EasyPermiss
         mOutputText.setVerticalScrollBarEnabled(true);
         mOutputText.setMovementMethod(new ScrollingMovementMethod());
         mOutputText.setText(
-                "Click the \'" + BUTTON_TEXT +"\' button to test the API.");
+                "Click the \'" + BUTTON_TEXT + "\' button to test the API.");
         main.addView(mOutputText);
 
         mProgress = new ProgressDialog(this);
         mProgress.setMessage("Calling Google Calendar API ...");
+    }
 
-        // Initialize credentials and service object.
-        mCredential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(), Arrays.asList(SCOPES))
-                .setBackOff(new ExponentialBackOff());
-        mOutputText.setText("");
+    @Override
+    public Loader onCreateLoader(int id, Bundle args) {
+
         getResultsFromApi();
+
+        return null;
+    }
+
+    @Override
+    public void onLoadFinished(Loader loader, Object data) {
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader loader) {
+
     }
 
     @Override
@@ -361,7 +459,52 @@ public class ScrollingActivity extends AppCompatActivity  implements EasyPermiss
                 REQUEST_GOOGLE_PLAY_SERVICES);
         dialog.show();
     }
+    @Override
+    public NdefMessage createNdefMessage(NfcEvent event) {
+        String text = ("Beam me up, Android!\n\n" +
+                "Beam Time: " + System.currentTimeMillis());
+        NdefMessage msg = new NdefMessage(
+                new NdefRecord[] { createMime(
+                        "application/vnd.com.example.android.beam", text.getBytes())
+                        /**
+                         * The Android Application Record (AAR) is commented out. When a device
+                         * receives a push with an AAR in it, the application specified in the AAR
+                         * is guaranteed to run. The AAR overrides the tag dispatch system.
+                         * You can add it back in to guarantee that this
+                         * activity starts when receiving a beamed message. For now, this code
+                         * uses the tag dispatch system.
+                        */
+                        //,NdefRecord.createApplicationRecord("com.example.android.beam")
+                });
+        return msg;
+    }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Check to see that the Activity started due to an Android Beam
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
+            processIntent(getIntent());
+        }
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+        // onResume gets called after this to handle the intent
+        setIntent(intent);
+    }
+
+    /**
+     * Parses the NDEF Message from the intent and prints to the TextView
+     */
+    void processIntent(Intent intent) {
+        Parcelable[] rawMsgs = intent.getParcelableArrayExtra(
+                NfcAdapter.EXTRA_NDEF_MESSAGES);
+        // only one message sent during the beam
+        NdefMessage msg = (NdefMessage) rawMsgs[0];
+        // record 0 contains the MIME type, record 1 is the AAR, if present
+        mOutputText.setText(new String(msg.getRecords()[0].getPayload()));
+    }
     /**
      * An asynchronous task that handles the Google Calendar API call.
      * Placing the API calls in their own task ensures the UI stays responsive.
@@ -383,8 +526,10 @@ public class ScrollingActivity extends AppCompatActivity  implements EasyPermiss
          * Background task to call Google Calendar API.
          * @param params no parameters needed for this task.
          */
+
         @Override
         protected List<String> doInBackground(Void... params) {
+
             try {
                 return getDataFromApi();
             } catch (Exception e) {
@@ -394,11 +539,6 @@ public class ScrollingActivity extends AppCompatActivity  implements EasyPermiss
             }
         }
 
-        /**
-         * Fetch a list of the next 10 events from the primary calendar.
-         * @return List of Strings describing returned events.
-         * @throws IOException
-         */
         private List<String> getDataFromApi() throws IOException {
             // List the next 10 events from the primary calendar.
             DateTime now = new DateTime(System.currentTimeMillis());

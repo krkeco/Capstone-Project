@@ -13,30 +13,30 @@
         android:orientation="vertical"
         android:id="@+id/scroll_llayout">
 
-    <TextView android:layout_width="wrap_content"
+    <TextView android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/text_margin"
-        android:text="Days Available" />
+        android:text="@string/intro" />
 
 
         <TextView android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/text_margin"
-            android:text="Start Date:" />
+            android:text="@string/start_day" />
 
     <CalendarView
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
         android:id="@+id/start_calendar"
         ></CalendarView>
 
         <TextView android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/text_margin"
-            android:text="End Date:" />
+            android:text="@string/end_day" />
         <CalendarView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_width="400dp"
+            android:layout_height="400dp"
             android:id="@+id/end_calendar"
             ></CalendarView>
 
@@ -44,13 +44,7 @@
     <TextView android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/text_margin"
-        android:text="Hours available" />
-
-
-    <TextView android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/text_margin"
-        android:text="Earliest available" />
+        android:text="@string/start_time" />
         <TimePicker
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -58,7 +52,7 @@
     <TextView android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/text_margin"
-        android:text="Latest Available:" />
+        android:text="@string/end_time" />
         <TimePicker
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
