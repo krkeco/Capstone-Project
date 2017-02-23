@@ -10,14 +10,8 @@ import android.content.Loader;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.nfc.NdefMessage;
-import android.nfc.NdefRecord;
-import android.nfc.NfcAdapter;
-import android.nfc.NfcAdapter.CreateNdefMessageCallback;
-import android.nfc.NfcEvent;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -35,7 +29,6 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
-import com.google.android.gms.ads.InterstitialAd;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.extensions.android.http.AndroidHttp;
@@ -50,7 +43,6 @@ import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
-import com.krkeco.dateit.admob.AdMob;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -61,16 +53,12 @@ import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 import timber.log.Timber;
 
-import static android.nfc.NdefRecord.createMime;
-
-public class ScrollingActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks,
-        LoaderManager.LoaderCallbacks,
-        CreateNdefMessageCallback {
-
-    NfcAdapter mNfcAdapter;
+public class ScrollingActivity extends AppCompatActivity
+        implements EasyPermissions.PermissionCallbacks,
+        LoaderManager.LoaderCallbacks {
 
     GoogleAccountCredential mCredential;
-    private TextView mOutputText;
+    private TextView mOutputText, intro;
     ProgressDialog mProgress;
 
     static final int REQUEST_ACCOUNT_PICKER = 1000;
@@ -84,8 +72,6 @@ public class ScrollingActivity extends AppCompatActivity implements EasyPermissi
     CalendarView endCalenderView;
     public LinearLayout main;
 
-    private InterstitialAd mInterstitialAd;
-    private AdMob adMob;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,37 +88,21 @@ public class ScrollingActivity extends AppCompatActivity implements EasyPermissi
 
         initGoogleCred();
 
-        initAdmob();
 
         initCalendar();
 
-        initNFC();
-
-
-    }
-
-    public void initNFC(){
-        // Check for available NFC Adapter
-        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-        if (mNfcAdapter == null) {
-            Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show();
+        if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT) != 0) {
             finish();
             return;
         }
-        // Register callback
-        mNfcAdapter.setNdefPushMessageCallback(this, this);
     }
+
 
     public void initCalendar() {
 
         getLoaderManager().initLoader(0, null, this);
     }
 
-    public void initAdmob() {
-        adMob = new AdMob(this);
-        mInterstitialAd = adMob.newInterstitialAd();
-
-    }
 
     public void initGoogleCred() {
 
@@ -142,13 +112,7 @@ public class ScrollingActivity extends AppCompatActivity implements EasyPermissi
                 .setBackOff(new ExponentialBackOff());
         mOutputText.setText("");
 
-
-        //getAccount();
-
-
     }
-
-
 
     public void initLayout(){
 
@@ -162,7 +126,8 @@ public class ScrollingActivity extends AppCompatActivity implements EasyPermissi
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
 
-                adMob.showInterstitial();
+                Intent intent = new Intent(ScrollingActivity.this,ReturnActivity.class);
+                startActivity(intent);
 
             }
         });
@@ -255,6 +220,9 @@ public class ScrollingActivity extends AppCompatActivity implements EasyPermissi
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
+        if (id == R.id.action_logout) {
+            return true;
+        }
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
@@ -459,52 +427,11 @@ public class ScrollingActivity extends AppCompatActivity implements EasyPermissi
                 REQUEST_GOOGLE_PLAY_SERVICES);
         dialog.show();
     }
-    @Override
-    public NdefMessage createNdefMessage(NfcEvent event) {
-        String text = ("Beam me up, Android!\n\n" +
-                "Beam Time: " + System.currentTimeMillis());
-        NdefMessage msg = new NdefMessage(
-                new NdefRecord[] { createMime(
-                        "application/vnd.com.example.android.beam", text.getBytes())
-                        /**
-                         * The Android Application Record (AAR) is commented out. When a device
-                         * receives a push with an AAR in it, the application specified in the AAR
-                         * is guaranteed to run. The AAR overrides the tag dispatch system.
-                         * You can add it back in to guarantee that this
-                         * activity starts when receiving a beamed message. For now, this code
-                         * uses the tag dispatch system.
-                        */
-                        //,NdefRecord.createApplicationRecord("com.example.android.beam")
-                });
-        return msg;
-    }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        // Check to see that the Activity started due to an Android Beam
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
-            processIntent(getIntent());
-        }
-    }
 
-    @Override
-    public void onNewIntent(Intent intent) {
-        // onResume gets called after this to handle the intent
-        setIntent(intent);
-    }
 
-    /**
-     * Parses the NDEF Message from the intent and prints to the TextView
-     */
-    void processIntent(Intent intent) {
-        Parcelable[] rawMsgs = intent.getParcelableArrayExtra(
-                NfcAdapter.EXTRA_NDEF_MESSAGES);
-        // only one message sent during the beam
-        NdefMessage msg = (NdefMessage) rawMsgs[0];
-        // record 0 contains the MIME type, record 1 is the AAR, if present
-        mOutputText.setText(new String(msg.getRecords()[0].getPayload()));
-    }
+
+
     /**
      * An asynchronous task that handles the Google Calendar API call.
      * Placing the API calls in their own task ensures the UI stays responsive.

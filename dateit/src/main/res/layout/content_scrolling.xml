@@ -16,6 +16,7 @@
     <TextView android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/text_margin"
+        android:id="@+id/intro_textview"
         android:text="@string/intro" />
 
 
@@ -25,8 +26,8 @@
             android:text="@string/start_day" />
 
     <CalendarView
-        android:layout_width="200dp"
-        android:layout_height="200dp"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
         android:id="@+id/start_calendar"
         ></CalendarView>
 
@@ -35,8 +36,8 @@
             android:layout_margin="@dimen/text_margin"
             android:text="@string/end_day" />
         <CalendarView
-            android:layout_width="400dp"
-            android:layout_height="400dp"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
             android:id="@+id/end_calendar"
             ></CalendarView>
 

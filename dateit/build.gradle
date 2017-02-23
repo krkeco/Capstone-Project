@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.krkeco.dateit"
-        minSdkVersion 15
+        minSdkVersion 16
         targetSdkVersion 25
         versionCode 1
         versionName "1.0"
@@ -24,6 +24,10 @@ android {
     }
 }
 
+repositories {
+    // ...
+    maven { url 'https://maven.fabric.io/public' }
+}
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
@@ -35,6 +39,9 @@ dependencies {
             exclude group: 'org.apache.httpcomponents'
         }
     }
+
+    compile 'com.firebaseui:firebase-ui-auth:1.2.0'
+    compile 'com.google.firebase:firebase-database:10.0.1'
     compile 'com.jakewharton.timber:timber:4.5.1'
     compile 'com.android.support:appcompat-v7:25.1.1'
     compile 'com.android.support:design:25.1.1'
