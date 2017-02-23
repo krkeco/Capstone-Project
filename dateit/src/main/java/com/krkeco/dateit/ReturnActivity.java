@@ -20,9 +20,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.ads.InterstitialAd;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.krkeco.dateit.FireBase.LoginActivity;
 import com.krkeco.dateit.admob.AdMob;
 
 import java.nio.charset.Charset;
@@ -40,8 +37,6 @@ implements
     private InterstitialAd mInterstitialAd;
     private AdMob adMob;
 
-    private FirebaseAuth mFirebaseAuth;
-    private FirebaseUser mFirebaseUser;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,14 +47,11 @@ implements
         initAdmob();
 
 
-// Initialize Firebase Auth
-        mFirebaseAuth = FirebaseAuth.getInstance();
-        mFirebaseUser = mFirebaseAuth.getCurrentUser();
+      /*  // Write a message to the database
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference myRef = database.getReference("message");
 
-        if (mFirebaseUser == null) {
-            // Not logged in, launch the Log In activity
-            loadLogInView();
-        }
+        myRef.setValue("Hello, World!");*/
 
     }
 
@@ -67,6 +59,7 @@ implements
         adMob = new AdMob(this);
         mInterstitialAd = adMob.newInterstitialAd();
 
+        adMob.showInterstitial();
     }
 
     public void initLayout(){
@@ -79,12 +72,11 @@ implements
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                Snackbar.make(view, "Loading, please wait", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
 
                 adMob.showInterstitial();
-                Intent intent = new Intent(ReturnActivity.this,ScrollingActivity.class);
-                startActivity(intent);
+
             }
         });
 
@@ -98,13 +90,6 @@ implements
         textView = new TextView(this);
         //  textView.setText("12/15/17 from 3-5pm");
         main.addView(textView);
-    }
-
-    private void loadLogInView() {
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
     }
 
     public void initNFC(){
@@ -121,6 +106,7 @@ implements
         // Register callback to listen for message-sent success
         mNfcAdapter.setOnNdefPushCompleteCallback(this, this);
     }
+
 
     /**
      * Implementation for the CreateNdefMessageCallback interface
@@ -169,11 +155,9 @@ implements
         }
     };
 
-    private static final int RC_SIGN_IN = 123;
     @Override
     public void onResume() {
         super.onResume();
-
         // Check to see that the Activity started due to an Android Beam
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
             processIntent(getIntent());

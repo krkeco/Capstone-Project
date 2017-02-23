@@ -220,9 +220,6 @@ public class ScrollingActivity extends AppCompatActivity
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        if (id == R.id.action_logout) {
-            return true;
-        }
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
