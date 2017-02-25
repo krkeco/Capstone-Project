@@ -14,11 +14,11 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -27,7 +27,6 @@ import android.widget.CalendarView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.TimePicker;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -47,6 +46,7 @@ import com.google.api.services.calendar.model.Events;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
 
 import pub.devrel.easypermissions.AfterPermissionGranted;
@@ -72,6 +72,8 @@ public class ScrollingActivity extends AppCompatActivity
     CalendarView endCalenderView;
     public LinearLayout main;
 
+    long start_time, end_time, start_date, end_date;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,12 +86,12 @@ public class ScrollingActivity extends AppCompatActivity
             Timber.plant(new Timber.DebugTree());
         }
 
+        initTimes();//z-level 0 pls
+
         initLayout();
 
         initGoogleCred();
 
-
-        initCalendar();
 
         if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT) != 0) {
             finish();
@@ -98,7 +100,7 @@ public class ScrollingActivity extends AppCompatActivity
     }
 
 
-    public void initCalendar() {
+    public void initCalendarTask() {
 
         getLoaderManager().initLoader(0, null, this);
     }
@@ -114,61 +116,77 @@ public class ScrollingActivity extends AppCompatActivity
 
     }
 
+    public void initTimes(){
+
+        Calendar c = Calendar.getInstance();
+        int day = c.get(Calendar.DATE);
+        int month = c.get(Calendar.MONTH);
+        int year = c.get(Calendar.YEAR);
+        c.set(year,month, day, 0,0,0);
+
+        start_date = c.getTimeInMillis();
+        end_date = (c.getTimeInMillis()+7*24*60*60000);//1 week later...
+        start_time = 8*60*60000;//no one wants to meet up before 8am right?
+        end_time = 20*60*60000;//this ends the meeting at 9pm by default
+    }
+
     public void initLayout(){
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-
-                Intent intent = new Intent(ScrollingActivity.this,ReturnActivity.class);
-                startActivity(intent);
-
+                  initCalendarTask();
             }
         });
 
-
         CalendarView startCalenderView = (CalendarView) findViewById(R.id.start_calendar);
-
-        endCalenderView = (CalendarView) findViewById(R.id.end_calendar);
-
+        startCalenderView.setDate(start_date);
         startCalenderView.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
             @Override
             public void onSelectedDayChange(CalendarView arg0, int year, int month,
                                             int date) {
-                Toast.makeText(getApplicationContext(), (month + 1) + "/" + date + "/" + year, Toast.LENGTH_LONG).show();
-                }
+                Calendar c = Calendar.getInstance();
+                c.set(year, month, date, 0, 0);
+                start_date = c.getTimeInMillis();
+          }
         });
 
+        endCalenderView = (CalendarView) findViewById(R.id.end_calendar);
+        endCalenderView.setDate(end_date);
         endCalenderView.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
             @Override
             public void onSelectedDayChange(CalendarView arg0, int year, int month,
                                             int date) {
-                Toast.makeText(getApplicationContext(), (month + 1) + "/" + date + "/" + year, Toast.LENGTH_LONG).show();
+                Calendar c = Calendar.getInstance();
+                c.set(year, month, date, 0, 0);
+                end_date = c.getTimeInMillis();
             }
         });
 
         TimePicker startTimePicker = (TimePicker) findViewById(R.id.start_time_picker);
+        startTimePicker.setCurrentHour(8);
+        startTimePicker.setCurrentMinute(0);
         startTimePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
             @Override
             public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
-                Toast.makeText(getApplicationContext(), hourOfDay + ":" + minute + " is set for time", Toast.LENGTH_LONG).show();
+                start_time = Long.valueOf( (hourOfDay*60+minute)*60000 );
             }
         });
 
-        TimePicker endTimePicker = (TimePicker) findViewById(R.id.end_time_picker);
+        final TimePicker endTimePicker = (TimePicker) findViewById(R.id.end_time_picker);
+        endTimePicker.setCurrentHour(20);
+        endTimePicker.setCurrentMinute(0);
         endTimePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
             @Override
             public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
-                Toast.makeText(getApplicationContext(), hourOfDay + ":" + minute + " is set for time", Toast.LENGTH_LONG).show();
+                end_time = Long.valueOf( (hourOfDay*60+minute)*60000 );
             }
         });
-
 
         ViewGroup.LayoutParams tlp = new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -226,6 +244,8 @@ public class ScrollingActivity extends AppCompatActivity
         }
         return super.onOptionsItemSelected(item);
     }
+
+    //TODO signout from this activity, also after sign out go to return activity
 
     /**
      * Attempt to call the API, after verifying that all the preconditions are
@@ -436,6 +456,7 @@ public class ScrollingActivity extends AppCompatActivity
     private class MakeRequestTask extends AsyncTask<Void, Void, List<String>> {
         private com.google.api.services.calendar.Calendar mService = null;
         private Exception mLastError = null;
+        private long day_toMillis, blackout_start,blackout_end;
 
         MakeRequestTask(GoogleAccountCredential credential) {
             HttpTransport transport = AndroidHttp.newCompatibleTransport();
@@ -454,37 +475,60 @@ public class ScrollingActivity extends AppCompatActivity
         @Override
         protected List<String> doInBackground(Void... params) {
 
+            day_toMillis = 24*60*60000;
+
+                return findBusyTime();
+        }
+
+        private List<String> findBusyTime(){
+            List<String> calendarDate = new ArrayList<String>();
             try {
-                return getDataFromApi();
+                calendarDate = getDataFromApi();
+                log(calendarDate.toString());
             } catch (Exception e) {
                 mLastError = e;
                 cancel(true);
                 return null;
             }
+
+            Long base = start_date+start_time;
+           calendarDate.add(String.format("(%s) (%s)", Long.toString(start_date),Long.toString(base)));
+
+            for(long x = start_date; x<end_date; x+=day_toMillis){
+                blackout_start = x+ end_time;
+                blackout_end = x+start_time + day_toMillis;
+                calendarDate.add(String.format("(%s) (%s)", Long.toString(blackout_start),Long.toString(blackout_end)));
+
+            }
+            log(calendarDate.toString());
+
+            return calendarDate;
         }
 
         private List<String> getDataFromApi() throws IOException {
-            // List the next 10 events from the primary calendar.
-            DateTime now = new DateTime(System.currentTimeMillis());
+            DateTime first_day_calendar = new DateTime(start_date+start_time);
+            DateTime last_day_calendar = new DateTime(end_date+end_time);
+
             List<String> eventStrings = new ArrayList<String>();
             Events events = mService.events().list("primary")
-                    .setMaxResults(10)
-                    .setTimeMin(now)
+                    .setTimeMax(last_day_calendar)
+                    .setTimeMin(first_day_calendar)
                     .setOrderBy("startTime")
                     .setSingleEvents(true)
                     .execute();
             List<Event> items = events.getItems();
 
             for (Event event : items) {
-                DateTime start = event.getStart().getDateTime();
-                if (start == null) {
-                    // All-day events don't have start times, so just use
-                    // the start date.
-                    start = event.getStart().getDate();
+                Long end, start;
+                if (event.getStart().getDateTime() != null) {
+                    start = event.getStart().getDateTime().getValue();
+                    end  = event.getEnd().getDateTime().getValue();
+                    eventStrings.add(
+                            String.format("(%s) (%s)",  start, end));
                 }
-                eventStrings.add(
-                        String.format("%s (%s)", event.getSummary(), start));
+
             }
+
             return eventStrings;
         }
 
@@ -501,10 +545,18 @@ public class ScrollingActivity extends AppCompatActivity
             if (output == null || output.size() == 0) {
                 mOutputText.setText("No results returned.");
             } else {
-                output.add(0, "Data retrieved using the Google Calendar API:");
+               // output.add(0, "Data retrieved using the Google Calendar API:");
                 String text = TextUtils.join("\n", output);
                 mOutputText.setText(text);
 
+                ArrayList<String> dateArray = new ArrayList<>(output.size());
+                dateArray.addAll(output);
+
+                log(output.toString());
+
+                Intent intent = new Intent(ScrollingActivity.this,ReturnActivity.class);
+                    intent.putStringArrayListExtra("data",(ArrayList<String>) output);
+                   startActivity(intent);
             }
         }
 
@@ -530,4 +582,8 @@ public class ScrollingActivity extends AppCompatActivity
         }
     }
 
+
+    public void log(String string){
+        Log.v("akrkeco",string);
+    }
 }

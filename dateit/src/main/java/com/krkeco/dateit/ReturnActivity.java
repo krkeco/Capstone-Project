@@ -14,6 +14,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -35,9 +36,10 @@ import com.krkeco.dateit.FireBase.LogInActivity;
 import com.krkeco.dateit.admob.AdMob;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 
 public class ReturnActivity extends AppCompatActivity
-implements
+        implements
         NfcAdapter.CreateNdefMessageCallback,
         NfcAdapter.OnNdefPushCompleteCallback{
     NfcAdapter mNfcAdapter;
@@ -54,18 +56,57 @@ implements
     private DatabaseReference mDatabase;
     private String mUserId;
 
-    String eventId = "event";//Long.toString(System.currentTimeMillis());
+    String eventId = "newevent";//Long.toString(System.currentTimeMillis());
     String DB_ID = "dateit";
+    /*
+    {
+      "rules": {
+        "dateit": {
+          "$uid": {
+            ".read": "auth != null && auth.uid == $uid",
+            ".write": "auth != null && auth.uid == $uid",
+            "$event_id": {
+              "item": {
+                "title": {
+                  ".validate": "newData.isString() && newData.val().length > 0"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    rules bu for firebasedb
+
+     */
+    ArrayList<String> calendarList;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+
+        initAdmob();
+
         initLayout();
 
         initNFC();
 
-        initAdmob();
-
         initFireBaseAuth();
+
+        Intent intent = getIntent();
+        if(intent.hasExtra("data")) {
+            calendarList = getIntent().getStringArrayListExtra("data");
+
+            Log.v("akrkeco",calendarList.toString());
+
+            for(int x = 0; x < calendarList.size(); x++) {
+
+                com.krkeco.dateit.FireBase.Item item = new com.krkeco.dateit.FireBase.Item(calendarList.get(x));
+                mDatabase.child(DB_ID).child(mUserId).child(eventId).push().setValue(item);
+            }
+        }
+
     }
 
     private void loadLogInView() {
@@ -92,7 +133,6 @@ implements
             final ListView listView = (ListView) findViewById(R.id.listView);
             final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1);
             listView.setAdapter(adapter);
-
 
             // Use Firebase to populate the list.
             mDatabase.child(DB_ID).child(mUserId).child(eventId).addChildEventListener(new ChildEventListener() {
@@ -132,6 +172,10 @@ implements
         adMob.showInterstitial();
     }
 
+    public void log(String string){
+        Log.v("akrkeco",string);
+    }
+
     public void initLayout(){
 
         setContentView(R.layout.activity_return);
@@ -153,7 +197,8 @@ implements
         //get bundle/details and create separate textbox for each date with onclick to add to calendar
         main = (LinearLayout) findViewById(R.id.return_llayout);
 
-          }
+
+    }
 
     public void initNFC(){
 
@@ -256,9 +301,6 @@ implements
                 NdefRecord.TNF_MIME_MEDIA, mimeBytes, new byte[0], payload);
         return mimeRecord;
     }
-
-
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
