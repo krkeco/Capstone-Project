@@ -13,7 +13,6 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.format.Time;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -35,6 +34,11 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.krkeco.dateit.FireBase.LogInActivity;
 import com.krkeco.dateit.admob.AdMob;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 
@@ -94,6 +98,12 @@ public class ReturnActivity extends AppCompatActivity
 
         initFireBaseAuth();
 
+        uploadIntentToFB();
+
+    }
+
+    public void uploadIntentToFB(){
+
         Intent intent = getIntent();
         if(intent.hasExtra("data")) {
             calendarList = getIntent().getStringArrayListExtra("data");
@@ -102,10 +112,14 @@ public class ReturnActivity extends AppCompatActivity
 
             for(int x = 0; x < calendarList.size(); x++) {
 
-                com.krkeco.dateit.FireBase.Item item = new com.krkeco.dateit.FireBase.Item(calendarList.get(x));
-                mDatabase.child(DB_ID).child(mUserId).child(eventId).push().setValue(item);
-            }
+                sendFBItem(calendarList.get(x));
+             }
         }
+    }
+
+    public void sendFBItem(String string){//this is so all sends follow same rules in db
+        com.krkeco.dateit.FireBase.Item item = new com.krkeco.dateit.FireBase.Item(string);
+        mDatabase.child(DB_ID).child(mUserId).child(eventId).push().setValue(item);
 
     }
 
@@ -221,23 +235,55 @@ public class ReturnActivity extends AppCompatActivity
      */
     @Override
     public NdefMessage createNdefMessage(NfcEvent event) {
-        Time time = new Time();
-        time.setToNow();
-        String text = ("Beam me up!\n\n" +
-                "Beam Time: " + time.format("%H:%M:%S"));
-        NdefMessage msg = new NdefMessage(
-                new NdefRecord[] { createMimeRecord(
-                        "application/com.krkeco.dateit", text.getBytes())
-                        /**
-                         * The Android Application Record (AAR) is commented out. When a device
-                         * receives a push with an AAR in it, the application specified in the AAR
-                         * is guaranteed to run. The AAR overrides the tag dispatch system.
-                         * You can add it back in to guarantee that this
-                         * activity starts when receiving a beamed message. For now, this code
-                         * uses the tag dispatch system.
-                        */
-                        //,NdefRecord.createApplicationRecord("com.example.android.beam")
-                });
+       // Time time = new Time();
+      //  time.setToNow();
+        NdefMessage msg;
+        if(calendarList != null){
+            ByteArrayOutputStream calendarByte = new ByteArrayOutputStream();
+            DataOutputStream calendarOStream = new DataOutputStream(calendarByte);
+            for (String element : calendarList) {
+                try {
+                    calendarOStream.writeUTF(element);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            byte[] calendarByteArray = calendarByte.toByteArray();
+            msg= new NdefMessage(
+                    new NdefRecord[]{createMimeRecord(
+                            "application/com.krkeco.dateit", calendarByteArray)
+                            /**
+                             * The Android Application Record (AAR) is commented out. When a device
+                             * receives a push with an AAR in it, the application specified in the AAR
+                             * is guaranteed to run. The AAR overrides the tag dispatch system.
+                             * You can add it back in to guarantee that this
+                             * activity starts when receiving a beamed message. For now, this code
+                             * uses the tag dispatch system.
+                            */
+                            //,NdefRecord.createApplicationRecord("com.example.android.beam")
+                    });
+        }else {
+            Snackbar.make(main, "Please setup your calendar settings by clicking the FAB before beaming content"
+                    , Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
+
+            msg = null;
+        }
+           /* String text = "please click the calendar FAB and select your settings to send";
+            msg = new NdefMessage(
+                    new NdefRecord[]{createMimeRecord(
+                            "application/com.krkeco.dateit", text.getBytes())
+                            /**
+                             * The Android Application Record (AAR) is commented out. When a device
+                             * receives a push with an AAR in it, the application specified in the AAR
+                             * is guaranteed to run. The AAR overrides the tag dispatch system.
+                             * You can add it back in to guarantee that this
+                             * activity starts when receiving a beamed message. For now, this code
+                             * uses the tag dispatch system.
+                            */
+                            //,NdefRecord.createApplicationRecord("com.example.android.beam")
+     /*               });
+        }*/
         return msg;
     }
 
@@ -287,7 +333,23 @@ public class ReturnActivity extends AppCompatActivity
         // only one message sent during the beam
         NdefMessage msg = (NdefMessage) rawMsgs[0];
         // record 0 contains the MIME type, record 1 is the AAR, if present
-        mInfoText.setText(new String(msg.getRecords()[0].getPayload()));
+        //mInfoText.setText(new String(msg.getRecords()[0].getPayload()));
+       // Snackbar.make(main, new String(msg.getRecords()[0].getPayload()), Snackbar.LENGTH_LONG)
+       //         .setAction("Action", null).show();
+
+// read from byte array
+        ByteArrayInputStream bais = new ByteArrayInputStream(msg.getRecords()[0].getPayload());
+        DataInputStream in = new DataInputStream(bais);
+        try {
+            while (in.available() > 0) {
+                String element = in.readUTF();
+                log("byte array sent: "+element);
+
+                sendFBItem(element);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
