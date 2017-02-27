@@ -1,12 +1,10 @@
 package com.krkeco.dateit;
 
-import java.util.Date;
-
 /**
  * Created by KC on 2/26/2017.
  */
 
-public class Event implements Comparable<Event>{
+public class BasicEvent implements Comparable<BasicEvent>{
     public Long start;
     public Long finish;
 
@@ -27,14 +25,14 @@ public class Event implements Comparable<Event>{
     }
 
 
-    public Event(long mstart, long mfinish){
+    public BasicEvent(long mstart, long mfinish){
         start = mstart;
         finish = mfinish;
     }
 
     @Override
-    public int compareTo(Event compareEvent) {
-        int compareQuantity = ((Event) compareEvent).getStart().intValue();
+    public int compareTo(BasicEvent compareBasicEvent) {
+        int compareQuantity = ((BasicEvent) compareBasicEvent).getStart().intValue();
 
         //ascending order
         return this.start.intValue() - compareQuantity;

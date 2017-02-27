@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
+import android.provider.CalendarContract;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -17,6 +18,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -24,6 +26,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.ads.InterstitialAd;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.util.ExponentialBackOff;
+import com.google.api.services.calendar.CalendarScopes;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
@@ -41,6 +46,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 
@@ -65,29 +71,32 @@ public class ReturnActivity extends AppCompatActivity
     String EVENT_ID = "event";//Long.toString(System.currentTimeMillis());
     String DB_ID = "dateit";
     String TITLE_ID = "title";
+    String LOCATION = "location";
     /**
-    {
-      "rules": {
-        "dateit": {
-          "$uid": {
-            ".read": "auth != null && auth.uid == $uid",
-            ".write": "auth != null && auth.uid == $uid",
-            "$event_id": {
-              "item": {
-                "title": {
-                  ".validate": "newData.isString() && newData.val().length > 0"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    rules bu for firebasedb
+     {
+     "rules": {
+     "dateit": {
+     "$uid": {
+     ".read": "auth != null && auth.uid == $uid",
+     ".write": "auth != null && auth.uid == $uid",
+     "$event_id": {
+     "item": {
+     "title": {
+     ".validate": "newData.isString() && newData.val().length > 0"
+     }
+     }
+     }
+     }
+     }
+     }
+     }
+     rules bu for firebasedb
 
      **/
     ArrayList<String> calendarList;
-    ArrayList<Event> compiledList, freeList;
+    public static ArrayList<String> attendeeList;
+    ArrayList<BasicEvent> compiledList, freeList;
+
     public boolean settingsUp = false;
     public long start_date,end_date;
 
@@ -97,7 +106,11 @@ public class ReturnActivity extends AppCompatActivity
 
 
         compiledList = new ArrayList<>();
+        attendeeList = new ArrayList<>();
+
         initAdmob();
+
+        initGoogleCred();
 
         initFireBaseAuth();
 
@@ -129,11 +142,12 @@ public class ReturnActivity extends AppCompatActivity
         if(settingsUp == true) {
             calendarList = getIntent().getStringArrayListExtra("data");
 
-            for(int x = 0; x < calendarList.size(); x++) {
+
+            for(int x = 1; x < calendarList.size(); x++) {//calendarlist[1] is email
 
                 sendFBItem(calendarList.get(x));
 
-             }
+            }
 
         }
     }
@@ -177,6 +191,11 @@ public class ReturnActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        // Set up ListView
+        final ListView listView = (ListView) findViewById(R.id.listView);
+        final ArrayAdapter<String> adapter1 = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1);
+        listView.setAdapter(adapter1);
+
         if(settingsUp==true){
 
             log("we went through to new fab");
@@ -188,96 +207,9 @@ public class ReturnActivity extends AppCompatActivity
                     Snackbar.make(view, "Loading, please wait", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
 
-                    Collections.sort(compiledList);
+                    findFreeTime();
 
-                    long fixend = end_date;
-                    long fixstart = start_date;
-
-                    freeList = new ArrayList<Event>();
-                    //only slots for time inside of selection
-                  //  int val =(int) (fixend-fixstart);
-
-                    //assume busy until proven free
-                /*    Boolean[] freetime = new Boolean[val];
-                    for(int f = 0; f<val;f++){
-                        freetime[f]=false;
-                    }*/
-
-                    //merge adjacent events
-                    for(int x = compiledList.size()-1; x>1;x--) {
-                        if(compiledList.get(x).getStart()<=compiledList.get(x-1).getFinish()){
-                            compiledList.get(x).setStart(compiledList.get(x-1).getStart());
-                            compiledList.remove(x-1);
-                        }
-                        log("merged: "+compiledList.get(x-1).getStart()+" to "+compiledList.get(x-1).getFinish());
-
-
-                    }
-                    //convert millis to minutes for events
-                    for(int x = 0; x<compiledList.size()-1;x++) {
-                        // divide 60000 and subtract fixstart for constant
-                        compiledList.get(x).setStart(compiledList.get(x).getStart());
-                        compiledList.get(x).setFinish(compiledList.get(x).getFinish());
-                        log("event"+x+": "+compiledList.get(x).getStart()+" to "+compiledList.get(x).getFinish());
-
-                    }
-
-                    if(compiledList.get(0).getStart()>=fixstart){
-                        for(int x = 0; x<compiledList.get(0).getStart();x++){
-
-                            Event newVent = new Event(fixstart,compiledList.get(0).getStart());
-                            freeList.add(newVent);
-                            log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
-                        }
-                    }else{log("no freetime before breakfast");}
-
-                    for(int x = 0; x<compiledList.size()-1;x++) {
-
-                        Event newVent = new Event(compiledList.get(x).getFinish(),compiledList.get(x+1).getStart());
-                        freeList.add(newVent);
-                      //  log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
-                        getStartDate(newVent.getStart(),newVent.getFinish());
-                     /*   for(int f = compiledList.get(x).getFinish().intValue(); f < compiledList.get(x+1).getStart().intValue();f++){
-                            freetime[f] = true;
-                            log("free time at:"+f);
-                        }*/
-                    }
-
-                    if(compiledList.get(compiledList.size()-1).getFinish() <fixend){
-                       /* for(int l =compiledList.get(compiledList.size()-1).getFinish().intValue(); l<freetime.length;l++){
-                            freetime[l]=true;
-                            log("free time at:"+l);
-                        }*/
-
-                        Event newVent = new Event(compiledList.get(compiledList.size()-1).getFinish(),fixend);
-                        freeList.add(newVent);
-
-                        //log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
-                    }else{log("no freetime after dinner");}
-/*
-                    boolean bounce =false;
-                    long start = 0;
-                    long end;
-                    freeList = new ArrayList<Event>();
-                    for(int x = 0; x < freetime.length; x++){
-
-                        if(freetime[x]==true
-                                && bounce == false){
-                           start =  (x+start_date);
-                            bounce = true;
-                        }
-                        if(freetime[x]==false
-                                && bounce == true){
-                            bounce = false;
-                            end = (x+start_date);
-                            Event newVent = new Event(start,end);
-                            freeList.add(newVent);
-                            log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
-                        }
-
-                    }
-*/
-
+                    setListToFreeTime();
                 }
             });
         }else {
@@ -295,6 +227,8 @@ public class ReturnActivity extends AppCompatActivity
             });
 
         }
+
+
         //get bundle/details and create separate textbox for each date with onclick to add to calendar
         main = (LinearLayout) findViewById(R.id.return_llayout);
 
@@ -306,9 +240,9 @@ public class ReturnActivity extends AppCompatActivity
             mUserId = mFirebaseUser.getUid();
 
             // Set up ListView
-            final ListView listView = (ListView) findViewById(R.id.listView);
+            //final ListView listView = (ListView) findViewById(R.id.listView);
             final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1);
-            listView.setAdapter(adapter);
+            // listView.setAdapter(adapter);
 
             // Use Firebase to populate the list.
             mDatabase.child(DB_ID).child(mUserId).child(EVENT_ID).addChildEventListener(new ChildEventListener() {
@@ -343,7 +277,170 @@ public class ReturnActivity extends AppCompatActivity
 
         }
     }
-    public void getStartDate(long millisstart, long millisfinish){
+
+    public void setListToFreeTime(){
+        main = (LinearLayout) findViewById(R.id.return_llayout);
+        String[] freetime = new String[freeList.size()];
+        for(int x =0 ; x<freetime.length;x++){
+            freetime[x] = "you are free "+getStartDate(freeList.get(x).getStart(),freeList.get(x).getFinish());
+            log(freetime[x]);
+        }
+
+        // Set up ListView
+        final ListView listView = (ListView) findViewById(R.id.listView);
+        final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1,freetime);
+
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+
+                Intent intent = new Intent(Intent.ACTION_INSERT);
+                intent.setData(CalendarContract.Events.CONTENT_URI);
+                intent.setType("vnd.android.cursor.item/event");
+                intent.putExtra(CalendarContract.Events.TITLE, EVENT_ID);
+                intent.putExtra(CalendarContract.Events.EVENT_LOCATION, LOCATION);
+                intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,freeList.get(position).getStart());
+                intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME,freeList.get(position).getFinish());
+                intent.putExtra(Intent.EXTRA_EMAIL, "oslckc@gmail.com");
+                intent.putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_BUSY);
+                startActivity(intent);
+             /*   Event event = new Event()
+                        .setSummary(EVENT_ID)
+                        .setLocation(LOCATION);
+
+                DateTime startDateTime = new DateTime(freeList.get(position).getStart());
+                EventDateTime start = new EventDateTime()
+                        .setDateTime(startDateTime);
+                      //  .setTimeZone("America/Los_Angeles");
+                event.setStart(start);
+
+                DateTime endDateTime = new DateTime(freeList.get(position).getFinish());
+                EventDateTime end = new EventDateTime()
+                        .setDateTime(endDateTime);
+                      //  .setTimeZone("America/Los_Angeles");
+                event.setEnd(end);
+
+                //String[] recurrence = new String[] {"RRULE:FREQ=DAILY;COUNT=2"};
+                //event.setRecurrence(Arrays.asList(recurrence));
+
+                EventAttendee[] attendees = new EventAttendee[] {
+                        new EventAttendee().setEmail("lpage@example.com"),
+                        new EventAttendee().setEmail("sbrin@example.com"),
+                };
+                event.setAttendees(Arrays.asList(attendees));
+
+                EventReminder[] reminderOverrides = new EventReminder[] {
+                        new EventReminder().setMethod("email").setMinutes(24 * 60),
+                        new EventReminder().setMethod("popup").setMinutes(10),
+                };
+                Event.Reminders reminders = new Event.Reminders()
+                        .setUseDefault(false)
+                        .setOverrides(Arrays.asList(reminderOverrides));
+                event.setReminders(reminders);
+
+                com.google.api.services.calendar.Calendar mService = null;
+                HttpTransport transport = AndroidHttp.newCompatibleTransport();
+                JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+                mService = new com.google.api.services.calendar.Calendar.Builder(
+                        transport, jsonFactory,mCredential)
+                        .setApplicationName("Google Calendar API Android Quickstart")
+                        .build();
+
+                String calendarId = "primary";
+                try {
+                    event = mService.events().insert(calendarId, event).execute();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                log("Event created: %s\n"+event.getHtmlLink());*/
+            }
+        });
+
+    }
+
+     public static GoogleAccountCredential mCredential;
+
+    private static final String[] SCOPES = {CalendarScopes.CALENDAR};
+    public void initGoogleCred() {
+
+        // Initialize credentials and service object.
+        mCredential = GoogleAccountCredential.usingOAuth2(
+                getApplicationContext(), Arrays.asList(SCOPES))
+                .setBackOff(new ExponentialBackOff());
+
+    }
+    public void cleanupList(){
+
+        //merge adjacent events
+        for(int x = compiledList.size()-1; x>0;x--) {
+            log("merging: "+compiledList.get(x).getStart()+" "+compiledList.get(x).getFinish()+
+                    "\n with:   "+compiledList.get(x-1).getStart()+" "+compiledList.get(x-1).getFinish());
+
+            if(compiledList.get(x).getStart()==compiledList.get(x).getFinish()) {
+
+                compiledList.remove(x);
+            }
+
+            //if events overlap, we combine int event(x-1) and remove event x
+            if(compiledList.get(x).getStart()<=compiledList.get(x-1).getFinish()){
+
+                if(compiledList.get(x).getStart()<compiledList.get(x-1).getStart()){
+
+                    compiledList.get(x-1).setStart(compiledList.get(x).getStart());
+                }
+
+                if(compiledList.get(x).getFinish()>compiledList.get(x-1).getFinish()){
+
+                    compiledList.get(x-1).setFinish(compiledList.get(x).getFinish());
+                }
+
+                compiledList.remove(x);
+            }
+            log("merged events; now: "+
+                    "\n with:   "+compiledList.get(x-1).getStart()+" "+compiledList.get(x-1).getFinish());
+
+        }
+    }
+
+    public void findFreeTime(){
+
+
+        long fixend = end_date;
+        long fixstart = start_date;
+
+        freeList = new ArrayList<BasicEvent>();
+
+        Collections.sort(compiledList);
+        cleanupList();
+        cleanupList();//can't figure out why I need this twice, but sometimes get messedup dates otherwise
+
+
+        if(compiledList.get(0).getStart()>=fixstart){
+
+            BasicEvent newVent = new BasicEvent(fixstart,compiledList.get(0).getStart());
+            freeList.add(newVent);
+            log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
+
+        }else{log("no freetime before breakfast");}
+
+        for(int x = 0; x<compiledList.size()-1;x++) {
+
+            BasicEvent newVent = new BasicEvent(compiledList.get(x).getFinish(),compiledList.get(x+1).getStart());
+            freeList.add(newVent);
+            log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
+            getStartDate(newVent.getStart(),newVent.getFinish());
+        }
+
+        if(compiledList.get(compiledList.size()-1).getFinish() <fixend){
+            BasicEvent newVent = new BasicEvent(compiledList.get(compiledList.size()-1).getFinish(),fixend);
+            freeList.add(newVent);
+
+            //log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
+        }else{log("no freetime after dinner");}
+
+    }
+
+    public String getStartDate(long millisstart, long millisfinish){
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(millisstart);
 
@@ -351,8 +448,21 @@ public class ReturnActivity extends AppCompatActivity
         int mMonth = calendar.get(Calendar.MONTH);
         int mDay = calendar.get(Calendar.DAY_OF_MONTH);
         int hour = calendar.get(Calendar.HOUR);
+        if(hour == 0){
+            hour =12;
+        }
         int minute = calendar.get(Calendar.MINUTE);
-
+        String min;
+        if(minute<10){
+            min = "0"+minute;
+        }else{
+            min = Integer.toString(minute);
+        }
+        String ampm = "AM";
+        int apmm = calendar.get(Calendar.AM_PM);
+        if(apmm == 1){
+            ampm = "PM";
+        }
 
         Calendar calendar2 = Calendar.getInstance();
         calendar2.setTimeInMillis(millisfinish);
@@ -361,20 +471,38 @@ public class ReturnActivity extends AppCompatActivity
         int mMonth2 = calendar2.get(Calendar.MONTH);
         int mDay2 = calendar2.get(Calendar.DAY_OF_MONTH);
         int hour2 = calendar2.get(Calendar.HOUR);
+        if(hour2 == 0){
+            hour2 =12;
+        }
         int minute2 = calendar2.get(Calendar.MINUTE);
+        String min2;
+        if(minute2<10){
+            min2 = "0"+minute2;
+        }else{min2 = Integer.toString(minute2);}
+        String ampm2 = "AM";
+        int apmm2 = calendar2.get(Calendar.AM_PM);
+        if(apmm2 == 1){
+            ampm2 = "PM";
+        }
+        String output;
+        if(mYear == mYear2 && mMonth == mMonth2 && mDay == mDay2){
+            output = +mYear+"/"+(mMonth+1)+"/"+mDay+"\n"+
+                    hour+":"+min+" "+ampm+" to "+hour2+":"+min2+" "+ampm2;
 
-        log("start:"+mYear+"/"+mMonth+"/"+mDay+" "+hour+":"+minute+"\n"+
-                "finish:"+mYear2+"/"+mMonth2+"/"+mDay2+" "+hour2+":"+minute2);
+        }else {
+            output = +mYear + "/" + (mMonth + 1) + "/" + mDay + " " + hour + ":" + min + " " + ampm + " to "
+                    + mYear2 + "/" + (mMonth2 + 1) + "/" + mDay2 + " " + hour2 + ":" + min2 + " " + ampm2;
+        }
+        return output;
     }
 
     public void addToList(String newString){
         long start = Long.parseLong(newString.substring(1,14));
         long end = Long.parseLong(newString.substring(17,30));
-        Event newEvent = new Event(start,end);
-        compiledList.add(newEvent);
+        BasicEvent newBasicEvent = new BasicEvent(start,end);
+        compiledList.add(newBasicEvent);
 
     }
-
 
     public void initNFC(){
 
@@ -384,6 +512,7 @@ public class ReturnActivity extends AppCompatActivity
         if (mNfcAdapter == null) {
             mInfoText = (TextView) textView;
             mInfoText.setText("NFC is not available on this device.");
+            log("NFC not allowed on device");
         }
         // Register callback to set NDEF message
         mNfcAdapter.setNdefPushMessageCallback(this, this);
@@ -391,14 +520,13 @@ public class ReturnActivity extends AppCompatActivity
         mNfcAdapter.setOnNdefPushCompleteCallback(this, this);
     }
 
-
     /**
      * Implementation for the CreateNdefMessageCallback interface
      */
     @Override
     public NdefMessage createNdefMessage(NfcEvent event) {
-       // Time time = new Time();
-      //  time.setToNow();
+        // Time time = new Time();
+        //  time.setToNow();
         NdefMessage msg;
         if(calendarList != null){
             ByteArrayOutputStream calendarByte = new ByteArrayOutputStream();
@@ -411,6 +539,7 @@ public class ReturnActivity extends AppCompatActivity
                 }
             }
             byte[] calendarByteArray = calendarByte.toByteArray();
+            log("msg ="+calendarByteArray.toString());
             msg= new NdefMessage(
                     new NdefRecord[]{createMimeRecord(
                             "application/com.krkeco.dateit", calendarByteArray)
@@ -443,7 +572,7 @@ public class ReturnActivity extends AppCompatActivity
                              * activity starts when receiving a beamed message. For now, this code
                              * uses the tag dispatch system.
                             */
-                            //,NdefRecord.createApplicationRecord("com.example.android.beam")
+        //,NdefRecord.createApplicationRecord("com.example.android.beam")
      /*               });
         }*/
         return msg;
@@ -474,15 +603,21 @@ public class ReturnActivity extends AppCompatActivity
     @Override
     public void onResume() {
         super.onResume();
+        log("on resume");
         // Check to see that the Activity started due to an Android Beam
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
+            log("being process intent");
             processIntent(getIntent());
+
+        }else{
+            log("resume was not due to nfc???");
         }
     }
 
     @Override
     public void onNewIntent(Intent intent) {
         // onResume gets called after this to handle the intent
+        log("got a new intent");
         setIntent(intent);
     }
 
@@ -490,23 +625,37 @@ public class ReturnActivity extends AppCompatActivity
      * Parses the NDEF Message from the intent and prints to the TextView
      */
     void processIntent(Intent intent) {
+        log("inside process intent");
         Parcelable[] rawMsgs = intent.getParcelableArrayExtra(
                 NfcAdapter.EXTRA_NDEF_MESSAGES);
         // only one message sent during the beam
         NdefMessage msg = (NdefMessage) rawMsgs[0];
         // record 0 contains the MIME type, record 1 is the AAR, if present
         //mInfoText.setText(new String(msg.getRecords()[0].getPayload()));
-       // Snackbar.make(main, new String(msg.getRecords()[0].getPayload()), Snackbar.LENGTH_LONG)
-       //         .setAction("Action", null).show();
+        // Snackbar.make(main, new String(msg.getRecords()[0].getPayload()), Snackbar.LENGTH_LONG)
+        //         .setAction("Action", null).show();
 
 // read from byte array
         ByteArrayInputStream bais = new ByteArrayInputStream(msg.getRecords()[0].getPayload());
         DataInputStream in = new DataInputStream(bais);
         try {
+            boolean first = true;
             while (in.available() > 0) {
-                String element = in.readUTF();
+                log("default first is true");
+                if(first == false){
+                    log("first false");
+                    String element = in.readUTF();
+                    sendFBItem(element);
 
-                sendFBItem(element);
+                }else{
+                    String element = in.readUTF();
+                    attendeeList.add(element);
+                    log("we have an attendee!");
+                    log(attendeeList.toString());
+                    log(element);
+                    first = false;
+                }
+
             }
         } catch (IOException e) {
             e.printStackTrace();

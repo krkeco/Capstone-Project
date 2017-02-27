@@ -38,14 +38,12 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.DateTime;
-import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
@@ -60,6 +58,8 @@ public class ScrollingActivity extends AppCompatActivity
     GoogleAccountCredential mCredential;
     private TextView mOutputText, intro;
     ProgressDialog mProgress;
+
+    public static String emailLogin;
 
     static final int REQUEST_ACCOUNT_PICKER = 1000;
     static final int REQUEST_AUTHORIZATION = 1001;
@@ -90,8 +90,9 @@ public class ScrollingActivity extends AppCompatActivity
 
         initLayout();
 
-        initGoogleCred();
+        //initGoogleCred();
 
+        mCredential = ReturnActivity.mCredential;
 
         if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT) != 0) {
             finish();
@@ -106,7 +107,7 @@ public class ScrollingActivity extends AppCompatActivity
     }
 
 
-    public void initGoogleCred() {
+  /*  public void initGoogleCred() {
 
         // Initialize credentials and service object.
         mCredential = GoogleAccountCredential.usingOAuth2(
@@ -114,7 +115,7 @@ public class ScrollingActivity extends AppCompatActivity
                 .setBackOff(new ExponentialBackOff());
         mOutputText.setText("");
 
-    }
+    }*/
 
     public void initTimes(){
 
@@ -258,6 +259,7 @@ public class ScrollingActivity extends AppCompatActivity
         if (! isGooglePlayServicesAvailable()) {
             acquireGooglePlayServices();
         } else if (mCredential.getSelectedAccountName() == null) {
+            emailLogin = mCredential.getSelectedAccountName();
             chooseAccount();
         } else if (! isDeviceOnline()) {
             mOutputText.setText("No network connection available.");
@@ -454,7 +456,7 @@ public class ScrollingActivity extends AppCompatActivity
      * Placing the API calls in their own task ensures the UI stays responsive.
      */
     private class MakeRequestTask extends AsyncTask<Void, Void, List<String>> {
-        private com.google.api.services.calendar.Calendar mService = null;
+        public com.google.api.services.calendar.Calendar mService = null;
         private Exception mLastError = null;
         private long day_toMillis, blackout_start,blackout_end;
 
@@ -494,6 +496,7 @@ public class ScrollingActivity extends AppCompatActivity
             Long base = start_date+start_time;
            calendarDate.add(String.format("(%s) (%s)", Long.toString(start_date),Long.toString(base)));
 
+            //adds an event that is from evening to morning the next day for blackout time
             for(long x = start_date; x<end_date; x+=day_toMillis){
                 blackout_start = x+ end_time;
                 blackout_end = x+start_time + day_toMillis;
@@ -510,6 +513,7 @@ public class ScrollingActivity extends AppCompatActivity
             DateTime last_day_calendar = new DateTime(end_date+end_time);
 
             List<String> eventStrings = new ArrayList<String>();
+            eventStrings.add(emailLogin);
             Events events = mService.events().list("primary")
                     .setTimeMax(last_day_calendar)
                     .setTimeMin(first_day_calendar)
@@ -523,8 +527,9 @@ public class ScrollingActivity extends AppCompatActivity
                 if (event.getStart().getDateTime() != null) {
                     start = event.getStart().getDateTime().getValue();
                     end  = event.getEnd().getDateTime().getValue();
-                    eventStrings.add(
-                            String.format("(%s) (%s)",  start, end));
+                        eventStrings.add(
+                                String.format("(%s) (%s)",  start, end));
+
                 }
 
             }
