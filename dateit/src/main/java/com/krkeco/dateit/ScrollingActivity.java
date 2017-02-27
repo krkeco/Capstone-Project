@@ -552,10 +552,12 @@ public class ScrollingActivity extends AppCompatActivity
                 ArrayList<String> dateArray = new ArrayList<>(output.size());
                 dateArray.addAll(output);
 
-                log(output.toString());
+              //  log(output.toString());
 
                 Intent intent = new Intent(ScrollingActivity.this,ReturnActivity.class);
                     intent.putStringArrayListExtra("data",(ArrayList<String>) output);
+                intent.putExtra("start",start_date);
+                intent.putExtra("end",end_date);
                    startActivity(intent);
             }
         }

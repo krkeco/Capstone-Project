@@ -41,6 +41,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
 
 public class ReturnActivity extends AppCompatActivity
         implements
@@ -60,9 +62,10 @@ public class ReturnActivity extends AppCompatActivity
     private DatabaseReference mDatabase;
     private String mUserId;
 
-    String eventId = "newevent";//Long.toString(System.currentTimeMillis());
+    String EVENT_ID = "event";//Long.toString(System.currentTimeMillis());
     String DB_ID = "dateit";
-    /*
+    String TITLE_ID = "title";
+    /**
     {
       "rules": {
         "dateit": {
@@ -82,44 +85,62 @@ public class ReturnActivity extends AppCompatActivity
     }
     rules bu for firebasedb
 
-     */
+     **/
     ArrayList<String> calendarList;
+    ArrayList<Event> compiledList, freeList;
+    public boolean settingsUp = false;
+    public long start_date,end_date;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
 
+        compiledList = new ArrayList<>();
         initAdmob();
+
+        initFireBaseAuth();
+
+        checkIntentForDB();
 
         initLayout();
 
         initNFC();
 
-        initFireBaseAuth();
-
         uploadIntentToFB();
 
     }
 
-    public void uploadIntentToFB(){
+    public void checkIntentForDB(){
 
         Intent intent = getIntent();
         if(intent.hasExtra("data")) {
-            calendarList = getIntent().getStringArrayListExtra("data");
 
-            Log.v("akrkeco",calendarList.toString());
+            settingsUp = true;
+            log("settings are up");
+            start_date = getIntent().getLongExtra("start",0);
+            end_date = getIntent().getLongExtra("end",0);
+
+        }
+    }
+
+    public void uploadIntentToFB(){
+
+        if(settingsUp == true) {
+            calendarList = getIntent().getStringArrayListExtra("data");
 
             for(int x = 0; x < calendarList.size(); x++) {
 
                 sendFBItem(calendarList.get(x));
+
              }
+
         }
     }
 
     public void sendFBItem(String string){//this is so all sends follow same rules in db
         com.krkeco.dateit.FireBase.Item item = new com.krkeco.dateit.FireBase.Item(string);
-        mDatabase.child(DB_ID).child(mUserId).child(eventId).push().setValue(item);
+        mDatabase.child(DB_ID).child(mUserId).child(EVENT_ID).push().setValue(item);
 
     }
 
@@ -137,46 +158,6 @@ public class ReturnActivity extends AppCompatActivity
         mFirebaseUser = mFirebaseAuth.getCurrentUser();
         mDatabase = FirebaseDatabase.getInstance().getReference();
 
-        if (mFirebaseUser == null) {
-            // Not logged in, launch the Log In activity
-            loadLogInView();
-        } else {
-            mUserId = mFirebaseUser.getUid();
-
-            // Set up ListView
-            final ListView listView = (ListView) findViewById(R.id.listView);
-            final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1);
-            listView.setAdapter(adapter);
-
-            // Use Firebase to populate the list.
-            mDatabase.child(DB_ID).child(mUserId).child(eventId).addChildEventListener(new ChildEventListener() {
-                @Override
-                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                    adapter.add((String) dataSnapshot.child("title").getValue());
-                }
-
-                @Override
-                public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-
-                }
-
-                @Override
-                public void onChildRemoved(DataSnapshot dataSnapshot) {
-                    adapter.remove((String) dataSnapshot.child("title").getValue());
-                }
-
-                @Override
-                public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-
-                }
-
-                @Override
-                public void onCancelled(DatabaseError databaseError) {
-
-                }
-            });
-
-        }
     }
 
     public void initAdmob() {
@@ -196,23 +177,204 @@ public class ReturnActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Loading, please wait", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+        if(settingsUp==true){
 
-                adMob.showInterstitial();
+            log("we went through to new fab");
+            FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+            fab.setImageDrawable(getResources().getDrawable(R.drawable.ic_schedule_white_48dp));
+            fab.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Snackbar.make(view, "Loading, please wait", Snackbar.LENGTH_LONG)
+                            .setAction("Action", null).show();
 
-            }
-        });
+                    Collections.sort(compiledList);
 
+                    long fixend = end_date;
+                    long fixstart = start_date;
+
+                    freeList = new ArrayList<Event>();
+                    //only slots for time inside of selection
+                  //  int val =(int) (fixend-fixstart);
+
+                    //assume busy until proven free
+                /*    Boolean[] freetime = new Boolean[val];
+                    for(int f = 0; f<val;f++){
+                        freetime[f]=false;
+                    }*/
+
+                    //merge adjacent events
+                    for(int x = compiledList.size()-1; x>1;x--) {
+                        if(compiledList.get(x).getStart()<=compiledList.get(x-1).getFinish()){
+                            compiledList.get(x).setStart(compiledList.get(x-1).getStart());
+                            compiledList.remove(x-1);
+                        }
+                        log("merged: "+compiledList.get(x-1).getStart()+" to "+compiledList.get(x-1).getFinish());
+
+
+                    }
+                    //convert millis to minutes for events
+                    for(int x = 0; x<compiledList.size()-1;x++) {
+                        // divide 60000 and subtract fixstart for constant
+                        compiledList.get(x).setStart(compiledList.get(x).getStart());
+                        compiledList.get(x).setFinish(compiledList.get(x).getFinish());
+                        log("event"+x+": "+compiledList.get(x).getStart()+" to "+compiledList.get(x).getFinish());
+
+                    }
+
+                    if(compiledList.get(0).getStart()>=fixstart){
+                        for(int x = 0; x<compiledList.get(0).getStart();x++){
+
+                            Event newVent = new Event(fixstart,compiledList.get(0).getStart());
+                            freeList.add(newVent);
+                            log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
+                        }
+                    }else{log("no freetime before breakfast");}
+
+                    for(int x = 0; x<compiledList.size()-1;x++) {
+
+                        Event newVent = new Event(compiledList.get(x).getFinish(),compiledList.get(x+1).getStart());
+                        freeList.add(newVent);
+                      //  log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
+                        getStartDate(newVent.getStart(),newVent.getFinish());
+                     /*   for(int f = compiledList.get(x).getFinish().intValue(); f < compiledList.get(x+1).getStart().intValue();f++){
+                            freetime[f] = true;
+                            log("free time at:"+f);
+                        }*/
+                    }
+
+                    if(compiledList.get(compiledList.size()-1).getFinish() <fixend){
+                       /* for(int l =compiledList.get(compiledList.size()-1).getFinish().intValue(); l<freetime.length;l++){
+                            freetime[l]=true;
+                            log("free time at:"+l);
+                        }*/
+
+                        Event newVent = new Event(compiledList.get(compiledList.size()-1).getFinish(),fixend);
+                        freeList.add(newVent);
+
+                        //log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
+                    }else{log("no freetime after dinner");}
+/*
+                    boolean bounce =false;
+                    long start = 0;
+                    long end;
+                    freeList = new ArrayList<Event>();
+                    for(int x = 0; x < freetime.length; x++){
+
+                        if(freetime[x]==true
+                                && bounce == false){
+                           start =  (x+start_date);
+                            bounce = true;
+                        }
+                        if(freetime[x]==false
+                                && bounce == true){
+                            bounce = false;
+                            end = (x+start_date);
+                            Event newVent = new Event(start,end);
+                            freeList.add(newVent);
+                            log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
+                        }
+
+                    }
+*/
+
+                }
+            });
+        }else {
+
+            FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+            fab.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Snackbar.make(view, "Loading, please wait", Snackbar.LENGTH_LONG)
+                            .setAction("Action", null).show();
+
+                    adMob.showInterstitial();
+
+                }
+            });
+
+        }
         //get bundle/details and create separate textbox for each date with onclick to add to calendar
         main = (LinearLayout) findViewById(R.id.return_llayout);
 
 
+        if (mFirebaseUser == null) {
+            // Not logged in, launch the Log In activity
+            loadLogInView();
+        } else {
+            mUserId = mFirebaseUser.getUid();
+
+            // Set up ListView
+            final ListView listView = (ListView) findViewById(R.id.listView);
+            final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1);
+            listView.setAdapter(adapter);
+
+            // Use Firebase to populate the list.
+            mDatabase.child(DB_ID).child(mUserId).child(EVENT_ID).addChildEventListener(new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    String dataValue = dataSnapshot.child(TITLE_ID).getValue().toString();
+
+                    adapter.add(dataValue);
+                    addToList(dataValue);
+                }
+
+                @Override
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+                }
+
+                @Override
+                public void onChildRemoved(DataSnapshot dataSnapshot) {
+                    adapter.remove((String) dataSnapshot.child(TITLE_ID).getValue());
+                }
+
+                @Override
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
+
+        }
     }
+    public void getStartDate(long millisstart, long millisfinish){
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(millisstart);
+
+        int mYear = calendar.get(Calendar.YEAR);
+        int mMonth = calendar.get(Calendar.MONTH);
+        int mDay = calendar.get(Calendar.DAY_OF_MONTH);
+        int hour = calendar.get(Calendar.HOUR);
+        int minute = calendar.get(Calendar.MINUTE);
+
+
+        Calendar calendar2 = Calendar.getInstance();
+        calendar2.setTimeInMillis(millisfinish);
+
+        int mYear2 = calendar2.get(Calendar.YEAR);
+        int mMonth2 = calendar2.get(Calendar.MONTH);
+        int mDay2 = calendar2.get(Calendar.DAY_OF_MONTH);
+        int hour2 = calendar2.get(Calendar.HOUR);
+        int minute2 = calendar2.get(Calendar.MINUTE);
+
+        log("start:"+mYear+"/"+mMonth+"/"+mDay+" "+hour+":"+minute+"\n"+
+                "finish:"+mYear2+"/"+mMonth2+"/"+mDay2+" "+hour2+":"+minute2);
+    }
+
+    public void addToList(String newString){
+        long start = Long.parseLong(newString.substring(1,14));
+        long end = Long.parseLong(newString.substring(17,30));
+        Event newEvent = new Event(start,end);
+        compiledList.add(newEvent);
+
+    }
+
 
     public void initNFC(){
 
@@ -343,7 +505,6 @@ public class ReturnActivity extends AppCompatActivity
         try {
             while (in.available() > 0) {
                 String element = in.readUTF();
-                log("byte array sent: "+element);
 
                 sendFBItem(element);
             }
