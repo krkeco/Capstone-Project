@@ -32,6 +32,8 @@
         android:layout_margin="@dimen/fab_margin"
         app:layout_anchor="@id/scroll_view"
         app:layout_anchorGravity="bottom|end"
-        app:srcCompat="@drawable/ic_settings_remote_black_48dp" />
+        android:focusable="true"
+        app:srcCompat="@drawable/ic_settings_remote_black_48dp"
+        android:contentDescription="@string/save_calendar_settings_button"/>
 
 </android.support.design.widget.CoordinatorLayout>

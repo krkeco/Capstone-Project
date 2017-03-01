@@ -27,11 +27,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/host_check_box"
-                android:checked="false"/>
+                android:checked="false"
+                android:focusable="true"
+                android:contentDescription="@string/return_host_checkbox"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/host_string"
+                android:supportsRtl="true"
                 android:id="@+id/host_textview"/>
         </LinearLayout>
 
@@ -44,11 +47,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/intro_return"
+            android:supportsRtl="true"
             android:text="@string/return_intro"/>
         <ListView
             android:nestedScrollingEnabled="true"
             android:id="@+id/listView"
             android:layout_width="match_parent"
+            android:focusable="true"
+            android:supportsRtl="true"
             android:layout_height="600dp">
         </ListView>
 

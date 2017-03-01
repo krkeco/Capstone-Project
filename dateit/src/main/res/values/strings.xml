@@ -1,11 +1,26 @@
 <resources>
     <string name="app_name">DateIt</string>
 
+    <string name="newuser_sign_up_button">Sign up, click here</string>
+    <string name="Login_button">Login Button</string>
+    <string name="login_password_field">Password Field</string>
+    <string name="login_email_field">Email Field</string>
+    <string name="calendar_settings_button">Setup Calendar Settings button</string>
+    <string name="save_calendar_settings_button">Save Calendar Settings button</string>
+    <string name="sign_up_email">Sign up new Email TextField</string>
+    <string name="sign_up_password">Sign up new Password TextField</string>
+    <string name="sign_up_button">Sign up Button</string>
+    <string name="return_host_checkbox">Host Checkbox</string>
+    <string name="scrolling_calendar_start">CalendarView Start Date</string>
+    <string name="scrolling_calendar_end">CalendarView End Date</string>
+    <string name="scrolling_day_start">TimePicker Begin Time</string>
+    <string name="scrolling_day_end">TimePicker End Time</string>
+
     <string name="action_settings">Logout</string>
     <string name="title_activity_return">ReturnActivity</string>
     <string name="title_activity_calendar">CalendarActivity</string>
     <string name="title_activity_admob">admob</string>
-    <string name="return_intro">You are busy:</string>
+    <string name="return_intro">Setup your calendar to see availability</string>
     <string name="host_string">Check if you are the host for this event</string>
     <string name="host_string_yes">"you are hosting this event"</string>
     <string name="start_day">Earliest Starting Date:</string>
@@ -20,7 +35,7 @@
 
     <string name="interstitial_ad_unit_id">ca-app-pub-3940256099942544/1033173712</string>
 
-   <string name="password_hint">Password</string>
+    <string name="password_hint">Password</string>
     <string name="email_hint">Email</string>
     <string name="sign_up_button_label">Sign Up</string>
     <string name="signup_error_message">Please make sure you enter an email address and password!</string>

@@ -4,8 +4,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.krkeco.dateit.ScrollingActivity" tools:showIn="@layout/activity_scrolling">
+    android:layout_height="match_parent"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context="com.krkeco.dateit.ScrollingActivity"
+    tools:showIn="@layout/activity_scrolling">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,59 +15,68 @@
         android:orientation="vertical"
         android:id="@+id/scroll_llayout">
 
-    <TextView android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/text_margin"
-        android:id="@+id/intro_textview"
-        android:text="@string/intro" />
+        <TextView android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/text_margin"
+            android:id="@+id/intro_textview"
+            android:text="@string/intro"
+            android:supportsRtl="true" />
 
 
         <TextView android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/text_margin"
-            android:text="@string/start_day" />
+            android:text="@string/start_day"
+            android:supportsRtl="true"/>
 
-    <CalendarView
-        android:layout_width="300dp"
-        android:layout_height="300dp"
-        android:id="@+id/start_calendar"
-        ></CalendarView>
+        <CalendarView
+            android:layout_width="300dp"
+            android:layout_height="300dp"
+            android:id="@+id/start_calendar"
+            android:focusable="true"
+            android:contentDescription="@string/scrolling_calendar_start"
+            ></CalendarView>
 
         <TextView android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/text_margin"
-            android:text="@string/end_day" />
+            android:text="@string/end_day"
+            android:supportsRtl="true" />
         <CalendarView
             android:layout_width="300dp"
             android:layout_height="300dp"
             android:id="@+id/end_calendar"
+            android:focusable="true"
+            android:contentDescription="@string/scrolling_calendar_end"
             ></CalendarView>
 
 
-    <TextView android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/text_margin"
-        android:text="@string/start_time" />
+        <TextView android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/text_margin"
+            android:text="@string/start_time"
+            android:supportsRtl="true" />
         <TimePicker
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:id="@+id/start_time_picker"
+            android:focusable="true"
+            android:contentDescription="@string/scrolling_day_start"
 
             ></TimePicker>
-    <TextView android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/text_margin"
-        android:text="@string/end_time" />
+        <TextView android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/text_margin"
+            android:text="@string/end_time"
+            android:supportsRtl="true" />
         <TimePicker
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:id="@+id/end_time_picker"></TimePicker>
+            android:id="@+id/end_time_picker"
+            android:focusable="true"
+            android:contentDescription="@string/scrolling_day_end"></TimePicker>
 
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Calendars to reference:"/>
 
     </LinearLayout>
 </android.support.v4.widget.NestedScrollView>

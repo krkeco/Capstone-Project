@@ -42,7 +42,9 @@
         android:layout_margin="@dimen/fab_margin"
         app:layout_anchor="@id/app_bar"
         app:layout_anchorGravity="bottom|end"
-        app:srcCompat="@drawable/ic_date_range_black_48dp" />
+        app:srcCompat="@drawable/ic_date_range_black_48dp"
+        android:focusable="true"
+        android:contentDescription="@string/calendar_settings_button"/>
 
 
 </android.support.design.widget.CoordinatorLayout>

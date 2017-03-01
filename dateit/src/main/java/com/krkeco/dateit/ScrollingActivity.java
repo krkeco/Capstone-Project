@@ -17,16 +17,15 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.CalendarView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.TimePicker;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -86,7 +85,6 @@ public class ScrollingActivity extends AppCompatActivity
 
         initLayout();
 
-        //initGoogleCred();
 
         mCredential = ReturnActivity.mCredential;
 
@@ -101,17 +99,6 @@ public class ScrollingActivity extends AppCompatActivity
 
         getLoaderManager().initLoader(0, null, this);
     }
-
-
-  /*  public void initGoogleCred() {
-
-        // Initialize credentials and service object.
-        mCredential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(), Arrays.asList(SCOPES))
-                .setBackOff(new ExponentialBackOff());
-        mOutputText.setText("");
-
-    }*/
 
     public void initTimes(){
 
@@ -141,7 +128,7 @@ public class ScrollingActivity extends AppCompatActivity
             }
         });
 
-        CalendarView startCalenderView = (CalendarView) findViewById(R.id.start_calendar);
+        final CalendarView startCalenderView = (CalendarView) findViewById(R.id.start_calendar);
         startCalenderView.setDate(start_date);
         startCalenderView.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
             @Override
@@ -150,6 +137,10 @@ public class ScrollingActivity extends AppCompatActivity
                 Calendar c = Calendar.getInstance();
                 c.set(year, month, date, 0, 0);
                 start_date = c.getTimeInMillis();
+                if(start_date<System.currentTimeMillis()){
+                    startCalenderView.setDate(System.currentTimeMillis());
+                    Toast.makeText(ScrollingActivity.this, "You need a Tardis to attend an event in the past!", Toast.LENGTH_SHORT).show();
+                }
           }
         });
 
@@ -162,6 +153,11 @@ public class ScrollingActivity extends AppCompatActivity
                 Calendar c = Calendar.getInstance();
                 c.set(year, month, date, 0, 0);
                 end_date = c.getTimeInMillis();
+
+                if(end_date<start_date){
+                    endCalenderView.setDate(start_date+24*60*60000);
+                    Toast.makeText(ScrollingActivity.this, "You can't end an event before it begins...", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -184,20 +180,20 @@ public class ScrollingActivity extends AppCompatActivity
                 end_time = Long.valueOf( (hourOfDay*60+minute)*60000 );
             }
         });
-
-        ViewGroup.LayoutParams tlp = new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-
-
-        mOutputText = new TextView(this);
-        mOutputText.setLayoutParams(tlp);
-        mOutputText.setPadding(16, 16, 16, 16);
-        mOutputText.setVerticalScrollBarEnabled(true);
-        mOutputText.setMovementMethod(new ScrollingMovementMethod());
-        mOutputText.setText(
-                "Click the \'" + BUTTON_TEXT + "\' button to test the API.");
-        main.addView(mOutputText);
+//
+//        ViewGroup.LayoutParams tlp = new ViewGroup.LayoutParams(
+//                ViewGroup.LayoutParams.WRAP_CONTENT,
+//                ViewGroup.LayoutParams.WRAP_CONTENT);
+//
+////
+//        mOutputText = new TextView(this);
+//        mOutputText.setLayoutParams(tlp);
+//        mOutputText.setPadding(16, 16, 16, 16);
+//        mOutputText.setVerticalScrollBarEnabled(true);
+//        mOutputText.setMovementMethod(new ScrollingMovementMethod());
+//        mOutputText.setText(
+//                "Click the \'" + BUTTON_TEXT + "\' button to test the API.");
+//        main.addView(mOutputText);
 
         mProgress = new ProgressDialog(this);
         mProgress.setMessage("Calling Google Calendar API ...");
@@ -443,11 +439,7 @@ public class ScrollingActivity extends AppCompatActivity
         dialog.show();
     }
 
-
-
-
-
-    /**
+        /**
      * An asynchronous task that handles the Google Calendar API call.
      * Placing the API calls in their own task ensures the UI stays responsive.
      */
