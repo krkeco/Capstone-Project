@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="QRGenearator-1.0.0">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/dateit/build/intermediates/exploded-aar/androidmads.library.qrgenearator/QRGenearator/1.0.0/res" />
+      <root url="jar://$PROJECT_DIR$/dateit/build/intermediates/exploded-aar/androidmads.library.qrgenearator/QRGenearator/1.0.0/jars/classes.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dateit/build/intermediates/exploded-aar/androidmads.library.qrgenearator/QRGenearator/1.0.0/jars/libs/qrg_lib.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/androidmads.library.qrgenearator/QRGenearator/1.0.0/1c1d03244b5f2c212b3e5cfe67fbdfa4648ff0c0/QRGenearator-1.0.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -49,7 +49,6 @@ import java.util.List;
 
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
-import timber.log.Timber;
 
 public class ScrollingActivity extends AppCompatActivity
         implements EasyPermissions.PermissionCallbacks,
@@ -82,9 +81,6 @@ public class ScrollingActivity extends AppCompatActivity
         main = (LinearLayout) findViewById(R.id.scroll_llayout);
 
 
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
-        }
 
         initTimes();//z-level 0 pls
 
@@ -259,7 +255,6 @@ public class ScrollingActivity extends AppCompatActivity
         if (! isGooglePlayServicesAvailable()) {
             acquireGooglePlayServices();
         } else if (mCredential.getSelectedAccountName() == null) {
-            emailLogin = mCredential.getSelectedAccountName();
             chooseAccount();
         } else if (! isDeviceOnline()) {
             mOutputText.setText("No network connection available.");
@@ -286,6 +281,7 @@ public class ScrollingActivity extends AppCompatActivity
                     .getString(PREF_ACCOUNT_NAME, null);
             if (accountName != null) {
                 mCredential.setSelectedAccountName(accountName);
+                emailLogin = mCredential.getSelectedAccountName();
                 getResultsFromApi();
             } else {
                 // Start a dialog from which the user can choose an account

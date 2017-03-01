@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
+    android:id="@+id/main_activity_return"
     tools:context="com.krkeco.dateit.ReturnActivity">
 
     <android.support.design.widget.AppBarLayout
@@ -42,5 +43,6 @@
         app:layout_anchor="@id/app_bar"
         app:layout_anchorGravity="bottom|end"
         app:srcCompat="@drawable/ic_date_range_black_48dp" />
+
 
 </android.support.design.widget.CoordinatorLayout>

@@ -1,25 +1,41 @@
 package com.krkeco.dateit;
 
+import android.Manifest;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.Point;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcEvent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
 import android.provider.CalendarContract;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -36,19 +52,22 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.zxing.WriterException;
 import com.krkeco.dateit.FireBase.LogInActivity;
 import com.krkeco.dateit.admob.AdMob;
+import com.krkeco.dateit.widget.WidgetProvider;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+
+import androidmads.library.qrgenearator.QRGContents;
+import androidmads.library.qrgenearator.QRGEncoder;
+import androidmads.library.qrgenearator.QRGSaver;
+
+import static com.krkeco.dateit.PrefHelper.checkKey;
 
 public class ReturnActivity extends AppCompatActivity
         implements
@@ -68,10 +87,11 @@ public class ReturnActivity extends AppCompatActivity
     private DatabaseReference mDatabase;
     private String mUserId;
 
-    String EVENT_ID = "event";//Long.toString(System.currentTimeMillis());
+    String EVENT_ID = "event";
     String DB_ID = "dateit";
     String TITLE_ID = "title";
     String LOCATION = "location";
+    Context mContext;
     /**
      {
      "rules": {
@@ -97,16 +117,20 @@ public class ReturnActivity extends AppCompatActivity
     public static ArrayList<String> attendeeList;
     ArrayList<BasicEvent> compiledList, freeList;
 
-    public boolean settingsUp = false;
+    public static GoogleAccountCredential mCredential;
+    private PrefHelper prefs;
+
+    private static final String[] SCOPES = {CalendarScopes.CALENDAR};
+
     public long start_date,end_date;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        mContext = getApplicationContext();
+        prefs = new PrefHelper(mContext);
 
         compiledList = new ArrayList<>();
-        attendeeList = new ArrayList<>();
 
         initAdmob();
 
@@ -129,24 +153,22 @@ public class ReturnActivity extends AppCompatActivity
         Intent intent = getIntent();
         if(intent.hasExtra("data")) {
 
-            settingsUp = true;
             log("settings are up");
             start_date = getIntent().getLongExtra("start",0);
             end_date = getIntent().getLongExtra("end",0);
+            // uploadIntentToFB();
 
         }
     }
 
     public void uploadIntentToFB(){
 
-        if(settingsUp == true) {
+        Intent intent = getIntent();
+        if(intent.hasExtra("data")) {
             calendarList = getIntent().getStringArrayListExtra("data");
 
-
             for(int x = 1; x < calendarList.size(); x++) {//calendarlist[1] is email
-
                 sendFBItem(calendarList.get(x));
-
             }
 
         }
@@ -187,19 +209,43 @@ public class ReturnActivity extends AppCompatActivity
 
     public void initLayout(){
 
+        checkKey(prefs.HOST_KEY);
+
         setContentView(R.layout.activity_return);
+        mInfoText = (TextView) findViewById(R.id.intro_return);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        main = (LinearLayout) findViewById(R.id.return_llayout);
+
+        CheckBox hostBox = (CheckBox) findViewById(R.id.host_check_box);
+        TextView hostTV = (TextView) findViewById(R.id.host_textview);
+        if(checkKey(prefs.HOST_KEY)){
+            hostBox.setChecked(true);
+            hostTV.setText(R.string.host_string_yes);
+        }
+
+        hostBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked){
+                    prefs.setKey(prefs.HOST_KEY,true);
+                    log("host toggle true");
+                }else{
+                    prefs.setKey(prefs.HOST_KEY,false);
+                    log("host toggle false");
+                }
+            }
+        });
 
         // Set up ListView
         final ListView listView = (ListView) findViewById(R.id.listView);
         final ArrayAdapter<String> adapter1 = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1);
         listView.setAdapter(adapter1);
+        CoordinatorLayout main_return = (CoordinatorLayout) findViewById(R.id.main_activity_return);
 
-        if(settingsUp==true){
-
-            log("we went through to new fab");
+        if(prefs.checkKey(prefs.SENT_KEY) && prefs.checkKey(prefs.HOST_KEY)){
             FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+
             fab.setImageDrawable(getResources().getDrawable(R.drawable.ic_schedule_white_48dp));
             fab.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -207,11 +253,26 @@ public class ReturnActivity extends AppCompatActivity
                     Snackbar.make(view, "Loading, please wait", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
 
+
+                    //  if (attendeeList != null) {
                     findFreeTime();
 
                     setListToFreeTime();
+
+                    createQRCode(EVENT_ID);
+
+                    prefs.setKey(prefs.SENT_KEY, false);
+
+                    emptyDataBase(EVENT_ID);
+
+                    //  } else {
+                    Snackbar.make(main, "Don't you think you should add some more people to the event with NFC?", Snackbar.LENGTH_LONG)
+                            .setAction("Action", null).show();
+
+                    // }
                 }
             });
+
         }else {
 
             FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -222,16 +283,13 @@ public class ReturnActivity extends AppCompatActivity
                             .setAction("Action", null).show();
 
                     adMob.showInterstitial();
+                    Intent intent = new Intent(ReturnActivity.this,ScrollingActivity.class);
+                    startActivity(intent);
 
                 }
             });
 
         }
-
-
-        //get bundle/details and create separate textbox for each date with onclick to add to calendar
-        main = (LinearLayout) findViewById(R.id.return_llayout);
-
 
         if (mFirebaseUser == null) {
             // Not logged in, launch the Log In activity
@@ -252,6 +310,7 @@ public class ReturnActivity extends AppCompatActivity
 
                     adapter.add(dataValue);
                     addToList(dataValue);
+                    prefs.setKey(prefs.SENT_KEY,true);
                 }
 
                 @Override
@@ -278,6 +337,11 @@ public class ReturnActivity extends AppCompatActivity
         }
     }
 
+    public void emptyDataBase(String event){
+        mDatabase.child(DB_ID).child(mUserId).child(event).setValue(null);
+        log("try to nullify firebase");
+    }
+
     public void setListToFreeTime(){
         main = (LinearLayout) findViewById(R.id.return_llayout);
         String[] freetime = new String[freeList.size()];
@@ -294,73 +358,102 @@ public class ReturnActivity extends AppCompatActivity
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
 
-                Intent intent = new Intent(Intent.ACTION_INSERT);
-                intent.setData(CalendarContract.Events.CONTENT_URI);
-                intent.setType("vnd.android.cursor.item/event");
-                intent.putExtra(CalendarContract.Events.TITLE, EVENT_ID);
-                intent.putExtra(CalendarContract.Events.EVENT_LOCATION, LOCATION);
-                intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,freeList.get(position).getStart());
-                intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME,freeList.get(position).getFinish());
-                intent.putExtra(Intent.EXTRA_EMAIL, "oslckc@gmail.com");
-                intent.putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_BUSY);
-                startActivity(intent);
-             /*   Event event = new Event()
-                        .setSummary(EVENT_ID)
-                        .setLocation(LOCATION);
+                setCalendarEvent(position);
 
-                DateTime startDateTime = new DateTime(freeList.get(position).getStart());
-                EventDateTime start = new EventDateTime()
-                        .setDateTime(startDateTime);
-                      //  .setTimeZone("America/Los_Angeles");
-                event.setStart(start);
 
-                DateTime endDateTime = new DateTime(freeList.get(position).getFinish());
-                EventDateTime end = new EventDateTime()
-                        .setDateTime(endDateTime);
-                      //  .setTimeZone("America/Los_Angeles");
-                event.setEnd(end);
-
-                //String[] recurrence = new String[] {"RRULE:FREQ=DAILY;COUNT=2"};
-                //event.setRecurrence(Arrays.asList(recurrence));
-
-                EventAttendee[] attendees = new EventAttendee[] {
-                        new EventAttendee().setEmail("lpage@example.com"),
-                        new EventAttendee().setEmail("sbrin@example.com"),
-                };
-                event.setAttendees(Arrays.asList(attendees));
-
-                EventReminder[] reminderOverrides = new EventReminder[] {
-                        new EventReminder().setMethod("email").setMinutes(24 * 60),
-                        new EventReminder().setMethod("popup").setMinutes(10),
-                };
-                Event.Reminders reminders = new Event.Reminders()
-                        .setUseDefault(false)
-                        .setOverrides(Arrays.asList(reminderOverrides));
-                event.setReminders(reminders);
-
-                com.google.api.services.calendar.Calendar mService = null;
-                HttpTransport transport = AndroidHttp.newCompatibleTransport();
-                JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
-                mService = new com.google.api.services.calendar.Calendar.Builder(
-                        transport, jsonFactory,mCredential)
-                        .setApplicationName("Google Calendar API Android Quickstart")
-                        .build();
-
-                String calendarId = "primary";
-                try {
-                    event = mService.events().insert(calendarId, event).execute();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                log("Event created: %s\n"+event.getHtmlLink());*/
             }
         });
 
     }
 
-     public static GoogleAccountCredential mCredential;
+    public void createQRCode(String string){
+        WindowManager manager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        Display display = manager.getDefaultDisplay();
+        Point point = new Point();
+        display.getSize(point);
+        int width = point.x;
+        int height = point.y;
+        int smallerDimension = width < height ? width : height;
+        smallerDimension = smallerDimension * 3 / 4;
 
-    private static final String[] SCOPES = {CalendarScopes.CALENDAR};
+        String savePath = Environment.getExternalStorageDirectory().getPath() + "/QRCode/";
+        // Initializing the QR Encoder with your value to be encoded, type you required and Dimension
+        QRGEncoder qrgEncoder = new QRGEncoder(string, null, QRGContents.Type.TEXT, smallerDimension);
+        try {
+            // Getting QR-Code as Bitmap
+            Bitmap  bitmap = qrgEncoder.encodeAsBitmap();
+            // Setting Bitmap to ImageView
+            ImageView qrImage = (ImageView) findViewById(R.id.qr_image_view);
+            qrImage.setImageBitmap(bitmap);
+            // Save with location, value, bitmap returned and type of Image(JPG/PNG).
+            QRGSaver.save(savePath, string, bitmap, QRGContents.ImageType.IMAGE_JPEG);
+
+        } catch (WriterException e) {
+            log(e.toString());
+        }
+
+    }
+
+    public void setCalendarEvent(int position){
+
+        Intent intent = new Intent(Intent.ACTION_INSERT);
+        intent.setData(CalendarContract.Events.CONTENT_URI);
+        intent.setType("vnd.android.cursor.item/event");
+        intent.putExtra(CalendarContract.Events.TITLE, EVENT_ID);
+
+        Context  context = getApplicationContext();
+        long event_id = getNewEventId(context.getContentResolver());
+        intent.putExtra(CalendarContract.Events._ID, event_id );
+        prefs.setKey(prefs.EVENT_KEY,event_id);
+
+        intent.putExtra(CalendarContract.Events.EVENT_LOCATION, LOCATION);
+        intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,freeList.get(position).getStart());
+        intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME,freeList.get(position).getFinish());
+        prefs.setKey(prefs.EVENT_NAME_KEY,EVENT_ID);
+        prefs.setKey(prefs.EVENT_START_KEY,freeList.get(position).getStart());
+        prefs.setKey(prefs.EVENT_END_KEY,freeList.get(position).getFinish());
+
+        StringBuilder stringBuilder = new StringBuilder();
+        if(attendeeList != null){
+            for (int x = 0; x < attendeeList.size(); x++) {
+                stringBuilder.append(attendeeList.get(x));
+                if (x < attendeeList.size() - 1) {
+                    stringBuilder.append(", ");
+                }
+            }
+        }
+
+        String attendance = stringBuilder.toString();
+        log(attendance+" is who is attending this event");
+        intent.putExtra(Intent.EXTRA_EMAIL, attendance);
+
+        intent.putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_BUSY);
+        startActivity(intent);
+
+
+    }
+    public long getNewEventId(ContentResolver cr) {
+        if ( ContextCompat.checkSelfPermission( this, Manifest.permission.WRITE_CALENDAR ) != PackageManager.PERMISSION_GRANTED ) {
+
+            ActivityCompat.requestPermissions( this,new String[]{Manifest.permission.WRITE_CALENDAR},0 );
+        }
+        Cursor cursor = cr.query(CalendarContract.Events.CONTENT_URI, new String [] {"MAX(_id) as max_id"}, null, null, "_id");
+        cursor.moveToFirst();
+        long max_val = cursor.getLong(cursor.getColumnIndex("max_id"));
+        return max_val+1;
+    }
+
+    public long getLastEventId(ContentResolver cr) {
+        if ( ContextCompat.checkSelfPermission( this, Manifest.permission.WRITE_CALENDAR ) != PackageManager.PERMISSION_GRANTED ) {
+
+            ActivityCompat.requestPermissions( this,new String[]{Manifest.permission.WRITE_CALENDAR},0 );
+        }
+        Cursor cursor = cr.query(CalendarContract.Events.CONTENT_URI, new String [] {"MAX(_id) as max_id"}, null, null, "_id");
+        cursor.moveToFirst();
+        long max_val = cursor.getLong(cursor.getColumnIndex("max_id"));
+        return max_val;
+    }
+
     public void initGoogleCred() {
 
         // Initialize credentials and service object.
@@ -369,6 +462,7 @@ public class ReturnActivity extends AppCompatActivity
                 .setBackOff(new ExponentialBackOff());
 
     }
+
     public void cleanupList(){
 
         //merge adjacent events
@@ -497,10 +591,15 @@ public class ReturnActivity extends AppCompatActivity
     }
 
     public void addToList(String newString){
-        long start = Long.parseLong(newString.substring(1,14));
-        long end = Long.parseLong(newString.substring(17,30));
-        BasicEvent newBasicEvent = new BasicEvent(start,end);
-        compiledList.add(newBasicEvent);
+        try {
+            long start = Long.parseLong(newString.substring(1, 14));
+            long end = Long.parseLong(newString.substring(17, 30));
+            BasicEvent newBasicEvent = new BasicEvent(start, end);
+            compiledList.add(newBasicEvent);
+
+        }catch (NumberFormatException e){
+            e.printStackTrace();
+        }
 
     }
 
@@ -525,9 +624,9 @@ public class ReturnActivity extends AppCompatActivity
      */
     @Override
     public NdefMessage createNdefMessage(NfcEvent event) {
-        // Time time = new Time();
-        //  time.setToNow();
         NdefMessage msg;
+
+        /*
         if(calendarList != null){
             ByteArrayOutputStream calendarByte = new ByteArrayOutputStream();
             DataOutputStream calendarOStream = new DataOutputStream(calendarByte);
@@ -551,16 +650,24 @@ public class ReturnActivity extends AppCompatActivity
                              * activity starts when receiving a beamed message. For now, this code
                              * uses the tag dispatch system.
                             */
-                            //,NdefRecord.createApplicationRecord("com.example.android.beam")
-                    });
+        //,NdefRecord.createApplicationRecord("com.example.android.beam")
+       /*             });
         }else {
             Snackbar.make(main, "Please setup your calendar settings by clicking the FAB before beaming content"
                     , Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show();
 
             msg = null;
-        }
-           /* String text = "please click the calendar FAB and select your settings to send";
+        }*/
+        if(calendarList != null){
+           /* ByteArrayOutputStream calendarByte = new ByteArrayOutputStream();
+            DataOutputStream calendarOStream = new DataOutputStream(calendarByte);
+            for (String element : calendarList) {
+                    calendarOStream.writeUTF(element);
+            }
+         //   byte[] calendarByteArray = calendarByte.toByteArray();
+            log("msg ="+calendarByteArray.toString());*/
+            String text = calendarList.toString();// "please click the calendar FAB and select your settings to send";
             msg = new NdefMessage(
                     new NdefRecord[]{createMimeRecord(
                             "application/com.krkeco.dateit", text.getBytes())
@@ -572,9 +679,15 @@ public class ReturnActivity extends AppCompatActivity
                              * activity starts when receiving a beamed message. For now, this code
                              * uses the tag dispatch system.
                             */
-        //,NdefRecord.createApplicationRecord("com.example.android.beam")
-     /*               });
-        }*/
+                            //,NdefRecord.createApplicationRecord("com.example.android.beam")
+                    });
+        }else {
+            Snackbar.make(main, "Please setup your calendar settings by clicking the FAB before beaming content"
+                    , Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
+
+            msg = null;
+        }
         return msg;
     }
 
@@ -610,10 +723,20 @@ public class ReturnActivity extends AppCompatActivity
             processIntent(getIntent());
 
         }else{
-            log("resume was not due to nfc???");
+            log("resume was not due to nfc");
+        }
+
+        long prev_id = getLastEventId(getContentResolver());
+        log("retrieved id is "+prev_id);
+
+        // if prev_id == mEventId, means there is new events created
+        // and we need to insert new events into local sqlite database.
+        if (prev_id == prefs.getKey(prefs.EVENT_KEY)) {
+            // do database insert
+            WidgetProvider.setText(this.getApplicationContext());
+
         }
     }
-
     @Override
     public void onNewIntent(Intent intent) {
         // onResume gets called after this to handle the intent
@@ -625,40 +748,40 @@ public class ReturnActivity extends AppCompatActivity
      * Parses the NDEF Message from the intent and prints to the TextView
      */
     void processIntent(Intent intent) {
+
         log("inside process intent");
         Parcelable[] rawMsgs = intent.getParcelableArrayExtra(
                 NfcAdapter.EXTRA_NDEF_MESSAGES);
         // only one message sent during the beam
         NdefMessage msg = (NdefMessage) rawMsgs[0];
-        // record 0 contains the MIME type, record 1 is the AAR, if present
-        //mInfoText.setText(new String(msg.getRecords()[0].getPayload()));
-        // Snackbar.make(main, new String(msg.getRecords()[0].getPayload()), Snackbar.LENGTH_LONG)
-        //         .setAction("Action", null).show();
 
-// read from byte array
-        ByteArrayInputStream bais = new ByteArrayInputStream(msg.getRecords()[0].getPayload());
-        DataInputStream in = new DataInputStream(bais);
-        try {
-            boolean first = true;
-            while (in.available() > 0) {
-                log("default first is true");
-                if(first == false){
-                    log("first false");
-                    String element = in.readUTF();
-                    sendFBItem(element);
+        mInfoText = (TextView) findViewById(R.id.intro_return);
+        mInfoText.setText(new String(msg.getRecords()[0].getPayload()));
 
-                }else{
-                    String element = in.readUTF();
-                    attendeeList.add(element);
-                    log("we have an attendee!");
-                    log(attendeeList.toString());
-                    log(element);
+        String message = new String(msg.getRecords()[0].getPayload());
+
+        int start=0;
+        int finish;
+        boolean first = true;
+
+        for(int x = 0; x< message.length();x++){
+            if(message.charAt(x) == ','){
+                finish = x;
+                if(first == false) {
+                    String substring = message.substring(start, finish);
+                    sendFBItem(substring);
+                    start = x + 2;
+                    log(substring);
+                }else{//get email out of first line
                     first = false;
+                    String substring = message.substring(start+1, finish);
+                    start = x+2;
+                    attendeeList.add(substring);
+                    log(substring+" has been added to the attendee list");
+
                 }
 
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
