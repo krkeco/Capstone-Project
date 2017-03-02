@@ -261,12 +261,9 @@ public class ReturnActivity extends AppCompatActivity
                            // .setAction("Action", null)
                     .show();
 
-
-                    //
                     findFreeTime();
 
                     setListToFreeTime();
-
 
                     prefs.setKey(prefs.SENT_KEY, false);
 
@@ -292,8 +289,6 @@ public class ReturnActivity extends AppCompatActivity
                             .show();
 
                     adMob.showInterstitial();
-                    Intent intent = new Intent(ReturnActivity.this,ScrollingActivity.class);
-                    startActivity(intent);
 
                 }
             });
@@ -540,7 +535,6 @@ public class ReturnActivity extends AppCompatActivity
         }
 
     }
-
 
     public void addToList(String newString){
         try {

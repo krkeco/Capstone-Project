@@ -1,11 +1,13 @@
 package com.krkeco.dateit.admob;
 
 import android.app.Activity;
+import android.content.Intent;
 
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.InterstitialAd;
 import com.krkeco.dateit.R;
+import com.krkeco.dateit.ScrollingActivity;
 
 /**
  * Created by KC on 2/21/2017.
@@ -48,8 +50,8 @@ public class AdMob {
     public  void showInterstitial() {
         // Show the ad if it's ready. Otherwise toast and reload the ad.
         if (mInterstitialAd != null && mInterstitialAd.isLoaded()) {
-        //    Intent intent = new Intent(mActivity.getApplicationContext(),ScrollingActivity.class);
-         //   mActivity.startActivity(intent);
+            Intent intent = new Intent(mActivity.getApplicationContext(),ScrollingActivity.class);
+            mActivity.startActivity(intent);
             mInterstitialAd.show();
 
         } else {
