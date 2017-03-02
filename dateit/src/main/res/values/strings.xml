@@ -15,7 +15,27 @@
     <string name="scrolling_calendar_end">CalendarView End Date</string>
     <string name="scrolling_day_start">TimePicker Begin Time</string>
     <string name="scrolling_day_end">TimePicker End Time</string>
+    <string name="no_result">No results returned.</string>
+    <string name="error">The following error occurred:</string>
+    <string name="cancel">Request was cancelled.</string>
+    <string name="no_network">No network connection available.</string>
+    <string name="no_gpservices">This app requires Google Play Services. Please install Google Play Services on your device and relaunch this app.</string>
+    <string name="calendar_setup_error"> Please setup your calendar settings by clicking the FAB before beaming content</string>
+    <string name="nfc_novail">NFC not allowed on device</string>
 
+    <string name="more_attendance_needed">Maybe you should add some more people to the event with NFC?</string>
+
+    <string name="sent">sent</string>
+    <string name="loading">Loading, Please Wait...</string>
+    <string name="location">TBD</string>
+    <string name="location_edit">editText location</string>
+    <string name="location_textview">location of event: </string>
+    <string name="duration">60</string>
+    <string name="duration_edit">editText Duration</string>
+    <string name="duration_textview">Length of event (in minutes): </string>
+    <string name="title">Event</string>
+    <string name="title_edit">editText Title</string>
+    <string name="title_textview">Name of event: </string>
     <string name="action_settings">Logout</string>
     <string name="title_activity_return">ReturnActivity</string>
     <string name="title_activity_calendar">CalendarActivity</string>

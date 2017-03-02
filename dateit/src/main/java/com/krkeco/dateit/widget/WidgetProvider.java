@@ -4,13 +4,15 @@ import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.provider.CalendarContract;
 import android.widget.RemoteViews;
 
 import com.krkeco.dateit.PrefHelper;
 import com.krkeco.dateit.R;
-import com.krkeco.dateit.ReturnActivity;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -43,9 +45,16 @@ public class WidgetProvider extends AppWidgetProvider {
         for (int i=0; i<N; i++) {
             int appWidgetId = appWidgetIds[i];
 
-            // Create an Intent to launch ExampleActivity
-            Intent intent = new Intent(context, ReturnActivity.class);
+            PrefHelper prefs = new PrefHelper(context);
+            long eventID = prefs.getKey(prefs.EVENT_KEY);
+
+            Uri uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventID);
+            Intent intent = new Intent(Intent.ACTION_VIEW).setData(uri);
             PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
+
+            // Create an Intent to launch ExampleActivity
+//            Intent intent = new Intent(context, ReturnActivity.class);
+//            PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
 
             // Get the layout for the App Widget and attach an on-click listener
             // to the button

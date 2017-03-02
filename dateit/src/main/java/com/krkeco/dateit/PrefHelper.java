@@ -35,17 +35,13 @@ public class PrefHelper {
 
         SharedPreferences sharedPref = context.getSharedPreferences("dateit",Context.MODE_PRIVATE);
         long host = sharedPref.getLong(key,-1);
-        log("host is: "+host);
-
-        return host;
+       return host;
     }
 
     public static String getKeyString(String key){
 
         SharedPreferences sharedPref = context.getSharedPreferences("dateit",Context.MODE_PRIVATE);
         String host = sharedPref.getString(key,null);
-        log("host is: "+host);
-
         return host;
     }
 
@@ -55,7 +51,6 @@ public class PrefHelper {
         SharedPreferences sharedPref = context.getSharedPreferences("dateit",Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putBoolean(key,host);
-        log("host is: "+host);
         editor.commit();
 
     }
@@ -64,8 +59,7 @@ public class PrefHelper {
         SharedPreferences sharedPref = context.getSharedPreferences("dateit",Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString(key,host);
-        log("host is: "+host);
-        editor.commit();
+       editor.commit();
 
     }
     public static void setKey(String key,long host){
@@ -73,8 +67,7 @@ public class PrefHelper {
         SharedPreferences sharedPref = context.getSharedPreferences("dateit",Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putLong(key,host);
-        log("host is: "+host);
-        editor.commit();
+       editor.commit();
 
     }
 

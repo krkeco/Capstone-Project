@@ -35,6 +35,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -58,10 +59,12 @@ import com.krkeco.dateit.admob.AdMob;
 import com.krkeco.dateit.widget.WidgetProvider;
 
 import java.nio.charset.Charset;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 
 import androidmads.library.qrgenearator.QRGContents;
 import androidmads.library.qrgenearator.QRGEncoder;
@@ -131,6 +134,9 @@ public class ReturnActivity extends AppCompatActivity
         prefs = new PrefHelper(mContext);
 
         compiledList = new ArrayList<>();
+        if(attendeeList==null){
+            attendeeList = new ArrayList<>();
+        }
 
         initAdmob();
 
@@ -152,8 +158,6 @@ public class ReturnActivity extends AppCompatActivity
 
         Intent intent = getIntent();
         if(intent.hasExtra("data")) {
-
-            log("settings are up");
             start_date = getIntent().getLongExtra("start",0);
             end_date = getIntent().getLongExtra("end",0);
             // uploadIntentToFB();
@@ -203,10 +207,6 @@ public class ReturnActivity extends AppCompatActivity
         adMob.showInterstitial();
     }
 
-    public void log(String string){
-        Log.v("akrkeco",string);
-    }
-
     public void initLayout(){
 
         checkKey(prefs.HOST_KEY);
@@ -219,20 +219,27 @@ public class ReturnActivity extends AppCompatActivity
 
         CheckBox hostBox = (CheckBox) findViewById(R.id.host_check_box);
         TextView hostTV = (TextView) findViewById(R.id.host_textview);
+        LinearLayout hostET = (LinearLayout) findViewById(R.id.host_layout);
         if(checkKey(prefs.HOST_KEY)){
             hostBox.setChecked(true);
             hostTV.setText(R.string.host_string_yes);
+            hostET.setVisibility(View.VISIBLE);
         }
 
         hostBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                TextView hostTV = (TextView) findViewById(R.id.host_textview);
+                LinearLayout hostET = (LinearLayout) findViewById(R.id.host_layout);
                 if(isChecked){
                     prefs.setKey(prefs.HOST_KEY,true);
-                    log("host toggle true");
+                    hostTV.setText(R.string.host_string_yes);
+                    hostET.setVisibility(View.VISIBLE);
                 }else{
                     prefs.setKey(prefs.HOST_KEY,false);
-                    log("host toggle false");
+                    hostTV.setText(R.string.host_string);
+                    hostET.setVisibility(View.INVISIBLE);
                 }
             }
         });
@@ -250,26 +257,27 @@ public class ReturnActivity extends AppCompatActivity
             fab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    Snackbar.make(view, "Loading, please wait", Snackbar.LENGTH_LONG)
-                            .setAction("Action", null).show();
+                    Snackbar.make(view, R.string.loading, Snackbar.LENGTH_LONG)
+                           // .setAction("Action", null)
+                    .show();
 
 
-                    //  if (attendeeList != null) {
+                    //
                     findFreeTime();
 
                     setListToFreeTime();
 
-                    createQRCode(EVENT_ID);
 
                     prefs.setKey(prefs.SENT_KEY, false);
 
                     emptyDataBase(EVENT_ID);
 
-                    //  } else {
-                    Snackbar.make(main, "Don't you think you should add some more people to the event with NFC?", Snackbar.LENGTH_LONG)
-                            .setAction("Action", null).show();
+                    if (attendeeList != null) {
+                    Snackbar.make(main, R.string.more_attendance_needed, Snackbar.LENGTH_LONG)
+                           // .setAction("Action", null)
+                            .show();
 
-                    // }
+                     }
                 }
             });
 
@@ -279,8 +287,9 @@ public class ReturnActivity extends AppCompatActivity
             fab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    Snackbar.make(view, "Loading, please wait", Snackbar.LENGTH_LONG)
-                            .setAction("Action", null).show();
+                    Snackbar.make(view, R.string.loading, Snackbar.LENGTH_LONG)
+                            //.setAction("Action", null)
+                            .show();
 
                     adMob.showInterstitial();
                     Intent intent = new Intent(ReturnActivity.this,ScrollingActivity.class);
@@ -297,12 +306,8 @@ public class ReturnActivity extends AppCompatActivity
         } else {
             mUserId = mFirebaseUser.getUid();
 
-            // Set up ListView
-            //final ListView listView = (ListView) findViewById(R.id.listView);
-            final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1);
-            // listView.setAdapter(adapter);
+             final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1);
 
-            // Use Firebase to populate the list.
             mDatabase.child(DB_ID).child(mUserId).child(EVENT_ID).addChildEventListener(new ChildEventListener() {
                 @Override
                 public void onChildAdded(DataSnapshot dataSnapshot, String s) {
@@ -339,15 +344,13 @@ public class ReturnActivity extends AppCompatActivity
 
     public void emptyDataBase(String event){
         mDatabase.child(DB_ID).child(mUserId).child(event).setValue(null);
-        log("try to nullify firebase");
     }
 
     public void setListToFreeTime(){
         main = (LinearLayout) findViewById(R.id.return_llayout);
         String[] freetime = new String[freeList.size()];
         for(int x =0 ; x<freetime.length;x++){
-            freetime[x] = "you are free "+getStartDate(freeList.get(x).getStart(),freeList.get(x).getFinish());
-            log(freetime[x]);
+            freetime[x] = freeList.get(x).getReadableDate();
         }
 
         // Set up ListView
@@ -389,7 +392,7 @@ public class ReturnActivity extends AppCompatActivity
             QRGSaver.save(savePath, string, bitmap, QRGContents.ImageType.IMAGE_JPEG);
 
         } catch (WriterException e) {
-            log(e.toString());
+            Toast.makeText(this, e.toString(), Toast.LENGTH_SHORT).show();
         }
 
     }
@@ -399,16 +402,26 @@ public class ReturnActivity extends AppCompatActivity
         Intent intent = new Intent(Intent.ACTION_INSERT);
         intent.setData(CalendarContract.Events.CONTENT_URI);
         intent.setType("vnd.android.cursor.item/event");
-        intent.putExtra(CalendarContract.Events.TITLE, EVENT_ID);
+
+        EditText titleText = (EditText) findViewById(R.id.return_host_title_text);
+        String title =  titleText.getText().toString();
+        intent.putExtra(CalendarContract.Events.TITLE,title);
+
+        EditText locationText = (EditText) findViewById(R.id.return_host_location_text);
+        String location =locationText.getText().toString();
+        intent.putExtra(CalendarContract.Events.EVENT_LOCATION,location);
+
+        EditText durationText = (EditText) findViewById(R.id.event_duration);
+        String duration =durationText.getText().toString();
+        long duration_long = Long.parseLong(duration)*60000;
 
         Context  context = getApplicationContext();
         long event_id = getNewEventId(context.getContentResolver());
-        intent.putExtra(CalendarContract.Events._ID, event_id );
+        intent.putExtra(CalendarContract.Events._ID, event_id);
         prefs.setKey(prefs.EVENT_KEY,event_id);
 
-        intent.putExtra(CalendarContract.Events.EVENT_LOCATION, LOCATION);
         intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,freeList.get(position).getStart());
-        intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME,freeList.get(position).getFinish());
+        intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME,freeList.get(position).getStart()+duration_long);
         prefs.setKey(prefs.EVENT_NAME_KEY,EVENT_ID);
         prefs.setKey(prefs.EVENT_START_KEY,freeList.get(position).getStart());
         prefs.setKey(prefs.EVENT_END_KEY,freeList.get(position).getFinish());
@@ -424,14 +437,20 @@ public class ReturnActivity extends AppCompatActivity
         }
 
         String attendance = stringBuilder.toString();
-        log(attendance+" is who is attending this event");
         intent.putExtra(Intent.EXTRA_EMAIL, attendance);
+        Date date = new Date(freeList.get(position).getStart());
+        DateFormat formatter = new SimpleDateFormat("HH:mm");
+        String dateFormatted = formatter.format(date);
+
+
+        createQRCode(title+" at "+location+" on "+ date);
 
         intent.putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_BUSY);
         startActivity(intent);
 
 
     }
+
     public long getNewEventId(ContentResolver cr) {
         if ( ContextCompat.checkSelfPermission( this, Manifest.permission.WRITE_CALENDAR ) != PackageManager.PERMISSION_GRANTED ) {
 
@@ -464,14 +483,24 @@ public class ReturnActivity extends AppCompatActivity
     }
 
     public void cleanupList(){
-
-        //merge adjacent events
         for(int x = compiledList.size()-1; x>0;x--) {
-            log("merging: "+compiledList.get(x).getStart()+" "+compiledList.get(x).getFinish()+
-                    "\n with:   "+compiledList.get(x-1).getStart()+" "+compiledList.get(x-1).getFinish());
+            log(compiledList.get(x).getStart()+"\n"
+            +compiledList.get(x).getFinish()+"\n"
+            +compiledList.get(x).getReadableDate());
 
-            if(compiledList.get(x).getStart()==compiledList.get(x).getFinish()) {
+            if(compiledList.get(x).getStart().compareTo(compiledList.get(x).getFinish())==0) {
 
+                compiledList.remove(x);
+                log("removed "+compiledList.get(x).getReadableDate());
+            }
+        }
+
+
+        //remove single sec event
+        for(int x = compiledList.size()-1; x>0;x--) {
+
+            if(compiledList.get(x).getStart()==compiledList.get(x).getFinish()
+                    || compiledList.get(x).getFinish() == null) {
                 compiledList.remove(x);
             }
 
@@ -482,113 +511,36 @@ public class ReturnActivity extends AppCompatActivity
 
                     compiledList.get(x-1).setStart(compiledList.get(x).getStart());
                 }
-
                 if(compiledList.get(x).getFinish()>compiledList.get(x-1).getFinish()){
 
                     compiledList.get(x-1).setFinish(compiledList.get(x).getFinish());
                 }
-
+                log("removed: "+compiledList.get(x).getReadableDate()+"\n"
+                +"merged into: "+compiledList.get(x-1).getReadableDate());
                 compiledList.remove(x);
             }
-            log("merged events; now: "+
-                    "\n with:   "+compiledList.get(x-1).getStart()+" "+compiledList.get(x-1).getFinish());
-
         }
     }
 
+    public void log(String string){
+        Log.v("akrkeco",string);
+    }
+
     public void findFreeTime(){
-
-
-        long fixend = end_date;
-        long fixstart = start_date;
 
         freeList = new ArrayList<BasicEvent>();
 
         Collections.sort(compiledList);
         cleanupList();
-        cleanupList();//can't figure out why I need this twice, but sometimes get messedup dates otherwise
-
-
-        if(compiledList.get(0).getStart()>=fixstart){
-
-            BasicEvent newVent = new BasicEvent(fixstart,compiledList.get(0).getStart());
-            freeList.add(newVent);
-            log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
-
-        }else{log("no freetime before breakfast");}
-
-        for(int x = 0; x<compiledList.size()-1;x++) {
+       for(int x = 0; x<compiledList.size()-1;x++) {
 
             BasicEvent newVent = new BasicEvent(compiledList.get(x).getFinish(),compiledList.get(x+1).getStart());
             freeList.add(newVent);
-            log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
-            getStartDate(newVent.getStart(),newVent.getFinish());
+
         }
-
-        if(compiledList.get(compiledList.size()-1).getFinish() <fixend){
-            BasicEvent newVent = new BasicEvent(compiledList.get(compiledList.size()-1).getFinish(),fixend);
-            freeList.add(newVent);
-
-            //log("event start: "+newVent.getStart()+" event finish: "+newVent.getFinish());
-        }else{log("no freetime after dinner");}
 
     }
 
-    public String getStartDate(long millisstart, long millisfinish){
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(millisstart);
-
-        int mYear = calendar.get(Calendar.YEAR);
-        int mMonth = calendar.get(Calendar.MONTH);
-        int mDay = calendar.get(Calendar.DAY_OF_MONTH);
-        int hour = calendar.get(Calendar.HOUR);
-        if(hour == 0){
-            hour =12;
-        }
-        int minute = calendar.get(Calendar.MINUTE);
-        String min;
-        if(minute<10){
-            min = "0"+minute;
-        }else{
-            min = Integer.toString(minute);
-        }
-        String ampm = "AM";
-        int apmm = calendar.get(Calendar.AM_PM);
-        if(apmm == 1){
-            ampm = "PM";
-        }
-
-        Calendar calendar2 = Calendar.getInstance();
-        calendar2.setTimeInMillis(millisfinish);
-
-        int mYear2 = calendar2.get(Calendar.YEAR);
-        int mMonth2 = calendar2.get(Calendar.MONTH);
-        int mDay2 = calendar2.get(Calendar.DAY_OF_MONTH);
-        int hour2 = calendar2.get(Calendar.HOUR);
-        if(hour2 == 0){
-            hour2 =12;
-        }
-        int minute2 = calendar2.get(Calendar.MINUTE);
-        String min2;
-        if(minute2<10){
-            min2 = "0"+minute2;
-        }else{min2 = Integer.toString(minute2);}
-        String ampm2 = "AM";
-        int apmm2 = calendar2.get(Calendar.AM_PM);
-        if(apmm2 == 1){
-            ampm2 = "PM";
-        }
-        String output;
-        if(mYear == mYear2 && mMonth == mMonth2 && mDay == mDay2){
-            output = +mYear+"/"+(mMonth+1)+"/"+mDay+"\n"+
-                    hour+":"+min+" "+ampm+" to "+hour2+":"+min2+" "+ampm2;
-
-        }else {
-            output = +mYear + "/" + (mMonth + 1) + "/" + mDay + " " + hour + ":" + min + " " + ampm + " to "
-                    + mYear2 + "/" + (mMonth2 + 1) + "/" + mDay2 + " " + hour2 + ":" + min2 + " " + ampm2;
-        }
-        return output;
-    }
 
     public void addToList(String newString){
         try {
@@ -610,8 +562,8 @@ public class ReturnActivity extends AppCompatActivity
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
         if (mNfcAdapter == null) {
             mInfoText = (TextView) textView;
-            mInfoText.setText("NFC is not available on this device.");
-            log("NFC not allowed on device");
+
+            Toast.makeText(this, R.string.nfc_novail, Toast.LENGTH_SHORT).show();
         }
         // Register callback to set NDEF message
         mNfcAdapter.setNdefPushMessageCallback(this, this);
@@ -626,47 +578,7 @@ public class ReturnActivity extends AppCompatActivity
     public NdefMessage createNdefMessage(NfcEvent event) {
         NdefMessage msg;
 
-        /*
         if(calendarList != null){
-            ByteArrayOutputStream calendarByte = new ByteArrayOutputStream();
-            DataOutputStream calendarOStream = new DataOutputStream(calendarByte);
-            for (String element : calendarList) {
-                try {
-                    calendarOStream.writeUTF(element);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            byte[] calendarByteArray = calendarByte.toByteArray();
-            log("msg ="+calendarByteArray.toString());
-            msg= new NdefMessage(
-                    new NdefRecord[]{createMimeRecord(
-                            "application/com.krkeco.dateit", calendarByteArray)
-                            /**
-                             * The Android Application Record (AAR) is commented out. When a device
-                             * receives a push with an AAR in it, the application specified in the AAR
-                             * is guaranteed to run. The AAR overrides the tag dispatch system.
-                             * You can add it back in to guarantee that this
-                             * activity starts when receiving a beamed message. For now, this code
-                             * uses the tag dispatch system.
-                            */
-        //,NdefRecord.createApplicationRecord("com.example.android.beam")
-       /*             });
-        }else {
-            Snackbar.make(main, "Please setup your calendar settings by clicking the FAB before beaming content"
-                    , Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show();
-
-            msg = null;
-        }*/
-        if(calendarList != null){
-           /* ByteArrayOutputStream calendarByte = new ByteArrayOutputStream();
-            DataOutputStream calendarOStream = new DataOutputStream(calendarByte);
-            for (String element : calendarList) {
-                    calendarOStream.writeUTF(element);
-            }
-         //   byte[] calendarByteArray = calendarByte.toByteArray();
-            log("msg ="+calendarByteArray.toString());*/
             String text = calendarList.toString();// "please click the calendar FAB and select your settings to send";
             msg = new NdefMessage(
                     new NdefRecord[]{createMimeRecord(
@@ -682,9 +594,10 @@ public class ReturnActivity extends AppCompatActivity
                             //,NdefRecord.createApplicationRecord("com.example.android.beam")
                     });
         }else {
-            Snackbar.make(main, "Please setup your calendar settings by clicking the FAB before beaming content"
+            Snackbar.make(main, R.string.calendar_setup_error
                     , Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show();
+                   // .setAction("Action", null)
+                    .show();
 
             msg = null;
         }
@@ -707,7 +620,7 @@ public class ReturnActivity extends AppCompatActivity
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case MESSAGE_SENT:
-                    Toast.makeText(getApplicationContext(), "Message sent!", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), R.string.sent, Toast.LENGTH_LONG).show();
                     break;
             }
         }
@@ -716,40 +629,27 @@ public class ReturnActivity extends AppCompatActivity
     @Override
     public void onResume() {
         super.onResume();
-        log("on resume");
         // Check to see that the Activity started due to an Android Beam
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
-            log("being process intent");
             processIntent(getIntent());
 
-        }else{
-            log("resume was not due to nfc");
         }
-
+        //check if it returned from calendar app
         long prev_id = getLastEventId(getContentResolver());
-        log("retrieved id is "+prev_id);
-
-        // if prev_id == mEventId, means there is new events created
-        // and we need to insert new events into local sqlite database.
         if (prev_id == prefs.getKey(prefs.EVENT_KEY)) {
-            // do database insert
             WidgetProvider.setText(this.getApplicationContext());
-
         }
     }
     @Override
     public void onNewIntent(Intent intent) {
         // onResume gets called after this to handle the intent
-        log("got a new intent");
-        setIntent(intent);
+       setIntent(intent);
     }
 
     /**
      * Parses the NDEF Message from the intent and prints to the TextView
      */
     void processIntent(Intent intent) {
-
-        log("inside process intent");
         Parcelable[] rawMsgs = intent.getParcelableArrayExtra(
                 NfcAdapter.EXTRA_NDEF_MESSAGES);
         // only one message sent during the beam
@@ -771,13 +671,11 @@ public class ReturnActivity extends AppCompatActivity
                     String substring = message.substring(start, finish);
                     sendFBItem(substring);
                     start = x + 2;
-                    log(substring);
                 }else{//get email out of first line
                     first = false;
                     String substring = message.substring(start+1, finish);
                     start = x+2;
                     attendeeList.add(substring);
-                    log(substring+" has been added to the attendee list");
 
                 }
 
