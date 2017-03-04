@@ -22,9 +22,11 @@
     <string name="no_gpservices">This app requires Google Play Services. Please install Google Play Services on your device and relaunch this app.</string>
     <string name="calendar_setup_error"> Please setup your calendar settings by clicking the FAB before beaming content</string>
     <string name="nfc_novail">NFC not allowed on device</string>
-
+    <string name="qr_imageview">QR code of event</string>
+    <string name="event_time_past">You need a Tardis to attend an event in the past!</string>
+    <string name="event_end_past">You cannot end an event before it begins...</string>
     <string name="more_attendance_needed">Maybe you should add some more people to the event with NFC?</string>
-
+    <string name="call_calendar_api">Calling Calendar API</string>
     <string name="sent">sent</string>
     <string name="loading">Loading, Please Wait...</string>
     <string name="location">TBD</string>

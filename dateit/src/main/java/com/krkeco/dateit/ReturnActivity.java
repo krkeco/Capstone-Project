@@ -17,6 +17,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
+import android.os.PersistableBundle;
 import android.provider.CalendarContract;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
@@ -84,12 +85,14 @@ public class ReturnActivity extends AppCompatActivity
     TextView textView;
     private InterstitialAd mInterstitialAd;
     private AdMob adMob;
+    ImageView qrImage;
 
     private FirebaseAuth mFirebaseAuth;
     private FirebaseUser mFirebaseUser;
     private DatabaseReference mDatabase;
     private String mUserId;
 
+    private Bitmap mQRBitmap = null;
     String EVENT_ID = "event";
     String DB_ID = "dateit";
     String TITLE_ID = "title";
@@ -132,6 +135,12 @@ public class ReturnActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         mContext = getApplicationContext();
         prefs = new PrefHelper(mContext);
+
+        qrImage = (ImageView) findViewById(R.id.return_image_view);
+        if (savedInstanceState != null) {
+            mQRBitmap = savedInstanceState.getParcelable("bitmap");
+            qrImage.setImageBitmap(mQRBitmap);
+        }
 
         compiledList = new ArrayList<>();
         if(attendeeList==null){
@@ -372,19 +381,20 @@ public class ReturnActivity extends AppCompatActivity
         int width = point.x;
         int height = point.y;
         int smallerDimension = width < height ? width : height;
-        smallerDimension = smallerDimension * 3 / 4;
+                smallerDimension = smallerDimension * 3 / 4;
 
         String savePath = Environment.getExternalStorageDirectory().getPath() + "/QRCode/";
         // Initializing the QR Encoder with your value to be encoded, type you required and Dimension
         QRGEncoder qrgEncoder = new QRGEncoder(string, null, QRGContents.Type.TEXT, smallerDimension);
         try {
             // Getting QR-Code as Bitmap
-            Bitmap  bitmap = qrgEncoder.encodeAsBitmap();
+            mQRBitmap = qrgEncoder.encodeAsBitmap();
             // Setting Bitmap to ImageView
-            ImageView qrImage = (ImageView) findViewById(R.id.qr_image_view);
-            qrImage.setImageBitmap(bitmap);
+            qrImage = (ImageView) findViewById(R.id.qr_image_view);
+            qrImage.setImageBitmap(mQRBitmap);
             // Save with location, value, bitmap returned and type of Image(JPG/PNG).
-            QRGSaver.save(savePath, string, bitmap, QRGContents.ImageType.IMAGE_JPEG);
+            QRGSaver.save(savePath, string, mQRBitmap, QRGContents.ImageType.IMAGE_JPEG);
+
 
         } catch (WriterException e) {
             Toast.makeText(this, e.toString(), Toast.LENGTH_SHORT).show();
@@ -406,7 +416,7 @@ public class ReturnActivity extends AppCompatActivity
         String location =locationText.getText().toString();
         intent.putExtra(CalendarContract.Events.EVENT_LOCATION,location);
 
-        EditText durationText = (EditText) findViewById(R.id.event_duration);
+        EditText durationText = (EditText) findViewById(R.id.return_event_duration);
         String duration =durationText.getText().toString();
         long duration_long = Long.parseLong(duration)*60000;
 
@@ -563,6 +573,21 @@ public class ReturnActivity extends AppCompatActivity
         mNfcAdapter.setNdefPushMessageCallback(this, this);
         // Register callback to listen for message-sent success
         mNfcAdapter.setOnNdefPushCompleteCallback(this, this);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
+        super.onSaveInstanceState(outState, outPersistentState);
+
+
+        if(mQRBitmap != null){
+            outState.putParcelable("bitmap",mQRBitmap);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
     }
 
     /**

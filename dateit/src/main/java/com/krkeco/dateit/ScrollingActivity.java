@@ -63,7 +63,6 @@ public class ScrollingActivity extends AppCompatActivity
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
     static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
 
-    private static final String BUTTON_TEXT = "Call Google Calendar API";
     private static final String PREF_ACCOUNT_NAME = "accountName";
     private static final String[] SCOPES = {CalendarScopes.CALENDAR_READONLY};
     CalendarView endCalenderView;
@@ -138,7 +137,7 @@ public class ScrollingActivity extends AppCompatActivity
                 start_date = c.getTimeInMillis();
                 if(start_date<System.currentTimeMillis()){
                     startCalenderView.setDate(System.currentTimeMillis());
-                    Toast.makeText(ScrollingActivity.this, "You need a Tardis to attend an event in the past!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ScrollingActivity.this, R.string.event_time_past, Toast.LENGTH_SHORT).show();
                 }
           }
         });
@@ -155,7 +154,7 @@ public class ScrollingActivity extends AppCompatActivity
 
                 if(end_date<start_date){
                     endCalenderView.setDate(start_date+24*60*60000);
-                    Toast.makeText(ScrollingActivity.this, "You can't end an event before it begins...", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ScrollingActivity.this, R.string.event_end_past, Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -195,7 +194,7 @@ public class ScrollingActivity extends AppCompatActivity
 //        main.addView(mOutputText);
 
         mProgress = new ProgressDialog(this);
-        mProgress.setMessage("Calling Google Calendar API ...");
+        mProgress.setMessage( getText(R.string.call_calendar_api));
     }
 
     @Override
@@ -252,7 +251,7 @@ public class ScrollingActivity extends AppCompatActivity
         } else if (mCredential.getSelectedAccountName() == null) {
             chooseAccount();
         } else if (! isDeviceOnline()) {
-            Toast.makeText(this, R.string.no_network, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,R.string.no_network, Toast.LENGTH_SHORT).show();
         } else {
             new ScrollingActivity.MakeRequestTask(mCredential).execute();
         }

@@ -38,6 +38,12 @@
                 android:id="@+id/host_textview"/>
         </LinearLayout>
 
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/return_image_view"
+            android:contentDescription="@string/qr_imageview"/>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -92,7 +98,7 @@
                 <EditText
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:id="@+id/event_duration"
+                    android:id="@+id/return_event_duration"
                     android:text="@string/duration"
                     android:inputType="number"
                     android:contentDescription="@string/duration_edit"/>
