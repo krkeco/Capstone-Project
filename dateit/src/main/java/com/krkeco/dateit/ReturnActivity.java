@@ -17,7 +17,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
-import android.os.PersistableBundle;
 import android.provider.CalendarContract;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
@@ -136,11 +135,6 @@ public class ReturnActivity extends AppCompatActivity
         mContext = getApplicationContext();
         prefs = new PrefHelper(mContext);
 
-        qrImage = (ImageView) findViewById(R.id.return_image_view);
-        if (savedInstanceState != null) {
-            mQRBitmap = savedInstanceState.getParcelable("bitmap");
-            qrImage.setImageBitmap(mQRBitmap);
-        }
 
         compiledList = new ArrayList<>();
         if(attendeeList==null){
@@ -390,7 +384,7 @@ public class ReturnActivity extends AppCompatActivity
             // Getting QR-Code as Bitmap
             mQRBitmap = qrgEncoder.encodeAsBitmap();
             // Setting Bitmap to ImageView
-            qrImage = (ImageView) findViewById(R.id.qr_image_view);
+            qrImage = (ImageView) findViewById(R.id.return_image_view);
             qrImage.setImageBitmap(mQRBitmap);
             // Save with location, value, bitmap returned and type of Image(JPG/PNG).
             QRGSaver.save(savePath, string, mQRBitmap, QRGContents.ImageType.IMAGE_JPEG);
@@ -447,8 +441,10 @@ public class ReturnActivity extends AppCompatActivity
         DateFormat formatter = new SimpleDateFormat("HH:mm");
         String dateFormatted = formatter.format(date);
 
+String qrString = title+" at "+location+" on "+ date;
+        createQRCode(qrString);
+        prefs.setKey(prefs.QR_KEY,qrString);
 
-        createQRCode(title+" at "+location+" on "+ date);
 
         intent.putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_BUSY);
         startActivity(intent);
@@ -575,21 +571,6 @@ public class ReturnActivity extends AppCompatActivity
         mNfcAdapter.setOnNdefPushCompleteCallback(this, this);
     }
 
-    @Override
-    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
-        super.onSaveInstanceState(outState, outPersistentState);
-
-
-        if(mQRBitmap != null){
-            outState.putParcelable("bitmap",mQRBitmap);
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-    }
-
     /**
      * Implementation for the CreateNdefMessageCallback interface
      */
@@ -657,6 +638,13 @@ public class ReturnActivity extends AppCompatActivity
         long prev_id = getLastEventId(getContentResolver());
         if (prev_id == prefs.getKey(prefs.EVENT_KEY)) {
             WidgetProvider.setText(this.getApplicationContext());
+
+            if(qrImage == null) {
+                createQRCode(prefs.getKeyString(prefs.QR_KEY));
+                qrImage = (ImageView) findViewById(R.id.return_image_view);
+                qrImage.setImageBitmap(mQRBitmap);
+
+            }
         }
     }
     @Override

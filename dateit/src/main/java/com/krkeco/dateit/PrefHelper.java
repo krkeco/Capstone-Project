@@ -13,6 +13,7 @@ public class PrefHelper {
     public static Context context;
 
     public String HOST_KEY = "host";
+    public String QR_KEY = "qrcode";
     public String SENT_KEY = "sent";
     public String EVENT_KEY = "eventid";
     public String EVENT_START_KEY = "eventstart";
