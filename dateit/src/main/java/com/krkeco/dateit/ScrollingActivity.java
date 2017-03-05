@@ -16,6 +16,7 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -63,6 +64,7 @@ public class ScrollingActivity extends AppCompatActivity
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
     static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
 
+    private static final String BUTTON_TEXT = "Call Google Calendar API";
     private static final String PREF_ACCOUNT_NAME = "accountName";
     private static final String[] SCOPES = {CalendarScopes.CALENDAR_READONLY};
     CalendarView endCalenderView;
@@ -178,23 +180,8 @@ public class ScrollingActivity extends AppCompatActivity
                 end_time = Long.valueOf( (hourOfDay*60+minute)*60000 );
             }
         });
-//
-//        ViewGroup.LayoutParams tlp = new ViewGroup.LayoutParams(
-//                ViewGroup.LayoutParams.WRAP_CONTENT,
-//                ViewGroup.LayoutParams.WRAP_CONTENT);
-//
-////
-//        mOutputText = new TextView(this);
-//        mOutputText.setLayoutParams(tlp);
-//        mOutputText.setPadding(16, 16, 16, 16);
-//        mOutputText.setVerticalScrollBarEnabled(true);
-//        mOutputText.setMovementMethod(new ScrollingMovementMethod());
-//        mOutputText.setText(
-//                "Click the \'" + BUTTON_TEXT + "\' button to test the API.");
-//        main.addView(mOutputText);
-
         mProgress = new ProgressDialog(this);
-        mProgress.setMessage( getText(R.string.call_calendar_api));
+        mProgress.setMessage("Calling Google Calendar API ...");
     }
 
     @Override
@@ -251,7 +238,7 @@ public class ScrollingActivity extends AppCompatActivity
         } else if (mCredential.getSelectedAccountName() == null) {
             chooseAccount();
         } else if (! isDeviceOnline()) {
-            Toast.makeText(this,R.string.no_network, Toast.LENGTH_SHORT).show();
+       //     mOutputText.setText("No network connection available.");
         } else {
             new ScrollingActivity.MakeRequestTask(mCredential).execute();
         }
@@ -310,8 +297,8 @@ public class ScrollingActivity extends AppCompatActivity
         switch(requestCode) {
             case REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
-                    Toast.makeText(this, R.string.no_gpservices, Toast.LENGTH_SHORT).show();
-                                 } else {
+//                    mOutputText.setText(                            "This app requires Google Play Services. Please install " +                                    "Google Play Services on your device and relaunch this app.");
+                } else {
                     getResultsFromApi();
                 }
                 break;
@@ -524,6 +511,7 @@ public class ScrollingActivity extends AppCompatActivity
 
         @Override
         protected void onPreExecute() {
+        //    mOutputText.setText("");
             mProgress.show();
         }
 
@@ -531,11 +519,11 @@ public class ScrollingActivity extends AppCompatActivity
         protected void onPostExecute(List<String> output) {
             mProgress.hide();
             if (output == null || output.size() == 0) {
-                Toast.makeText(ScrollingActivity.this, R.string.no_result, Toast.LENGTH_SHORT).show();
+            //    mOutputText.setText("No results returned.");
             } else {
                // output.add(0, "Data retrieved using the Google Calendar API:");
-              //  String text = TextUtils.join("\n", output);
-               // mOutputText.setText(text);
+                String text = TextUtils.join("\n", output);
+             //   mOutputText.setText(text);
 
                 ArrayList<String> dateArray = new ArrayList<>(output.size());
                 dateArray.addAll(output);
@@ -563,10 +551,10 @@ public class ScrollingActivity extends AppCompatActivity
                             ((UserRecoverableAuthIOException) mLastError).getIntent(),
                             ScrollingActivity.REQUEST_AUTHORIZATION);
                 } else {
-                    Toast.makeText(ScrollingActivity.this, R.string.error+ mLastError.getMessage(), Toast.LENGTH_SHORT).show();
-                     }
+       //             mOutputText.setText("The following error occurred: " + mLastError.getMessage());
+                }
             } else {
-                Toast.makeText(ScrollingActivity.this, R.string.cancel, Toast.LENGTH_SHORT).show();
+        //        mOutputText.setText("Request cancelled.");
             }
         }
     }
